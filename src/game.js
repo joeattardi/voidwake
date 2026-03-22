@@ -258,6 +258,15 @@ class MainScene extends Phaser.Scene {
         if (this.health <= 0) {
             this.physics.pause();
             this.player.setTint(0xff0000);
+            this.player.setVisible(false);
+            
+            // Big particle explosion for player death
+            this.explosionEmitter.explode(100, this.player.x, this.player.y);
+            
+            // More intense camera effects on death
+            this.cameras.main.shake(500, 0.05);
+            this.cameras.main.flash(500, 255, 255, 255); // White flash for death
+
             this.add.text(400, 300, 'GAME OVER', { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
             this.sound.play('playerDeath');
         }
