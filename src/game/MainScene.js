@@ -1,9 +1,10 @@
-/**
- * Void Wake - Minimal Playable MVP
- * A simple Vampire Survivors-style space shooter in Phaser 3.
- */
+import Phaser from 'phaser';
 
-class MainScene extends Phaser.Scene {
+/**
+ * Void Wake - Main Game Scene
+ * A Vampire Survivors-style space shooter in Phaser 3.
+ */
+export default class MainScene extends Phaser.Scene {
     constructor() {
         super('MainScene');
         this.player = null;
@@ -18,24 +19,21 @@ class MainScene extends Phaser.Scene {
         this.coinText = null;
         this.coinCount = 0;
         this.lastFired = 0;
-        this.fireRate = 500; // ms
-        this.spawnRate = 1000; // ms
+        this.fireRate = 500;
+        this.spawnRate = 1000;
         this.starfieldLayers = null;
         this.starfieldAmbientVx = 6;
         this.starfieldAmbientVy = -2.5;
-        /** World recenters when the player exceeds this distance from origin (float stability). */
         this.worldRecenterThreshold = 12000;
         this.maxEnemies = 220;
         this.enemyCullDistance = 3400;
         this.bulletMaxDistance = 1600;
-        /** True speed cap (px/s); Arcade maxVelocity is per-axis, so we clamp vector length here. */
         this.playerMaxSpeed = 220;
-        this.enemyMaxSpeed = 200; // Enemies are faster than player for increased difficulty
-        // Radar properties
-        this.radarRange = 2500; // World units to detect
-        this.radarRadius = 40; // Screen pixels for radar display
+        this.enemyMaxSpeed = 200;
+        this.radarRange = 2500;
+        this.radarRadius = 40;
         this.radarGraphics = null;
-        this.radarX = 750; // Position on screen (bottom right with padding)
+        this.radarX = 750;
         this.radarY = 550;
     }
 
@@ -51,26 +49,21 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
-        // Create textures for bullet, coin, thrusters (player & enemy ship are PNGs)
         this.createTextures();
         this.setupStarfield();
 
-        // Background music
         this.sound.play('backgroundMusic', { loop: true, volume: 0.5 });
 
-        // Infinite arena: large physics bounds, no edge collision; camera follows the player.
         this.physics.world.setBounds(-2e6, -2e6, 4e6, 4e6);
         this.physics.world.setBoundsCollision(false, false, false, false);
 
-        // Setup Player
         this.player = this.physics.add.sprite(0, 0, 'player');
         this.player.setCollideWorldBounds(false);
-        this.player.setRotation(-Math.PI / 2); // Start pointing up
+        this.player.setRotation(-Math.PI / 2);
         this.player.setDamping(true);
-        this.player.setDrag(0.99); // Slight friction
+        this.player.setDrag(0.99);
         this.player.setMaxVelocity(this.playerMaxSpeed, this.playerMaxSpeed);
 
-        // Setup Groups
         this.bullets = this.physics.add.group({
             defaultKey: 'bullet',
             maxSize: 50
@@ -79,34 +72,29 @@ class MainScene extends Phaser.Scene {
         this.enemies = this.physics.add.group();
         this.coins = this.physics.add.group();
 
-        // Input
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd = this.input.keyboard.addKeys('W,A,S,D');
         this.qeKeys = this.input.keyboard.addKeys('Q,E');
 
-        // UI (fixed to viewport while the world scrolls)
         this.scoreText = this.add.text(16, 520, 'Score: 0', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0).setDepth(6);
         this.healthText = this.add.text(16, 540, 'Health: 100', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0).setDepth(6);
         this.coinText = this.add.text(16, 560, 'Coins: 0', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0).setDepth(6);
 
-        // Control Panel Background
         this.panelGraphics = this.add.graphics().setScrollFactor(0);
         this.panelGraphics.fillStyle(0x000000, 1.0);
         this.panelGraphics.fillRect(0, 500, 800, 150);
         this.panelGraphics.setDepth(5);
 
-        // Radar
         this.radarGraphics = this.add.graphics().setScrollFactor(0);
-        this.radarGraphics.setDepth(10); // Above panel
+        this.radarGraphics.setDepth(10);
 
         this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
         this.cameras.main.setRoundPixels(true);
 
-        // Particle Emitter for Explosions
         this.explosionEmitter = this.add.particles(0, 0, 'bullet', {
             speed: { min: 50, max: 150 },
             scale: { start: 1, end: 0 },
-            tint: [0xff0000, 0xffa500, 0xffff00], // Red, Orange, Yellow
+            tint: [0xff0000, 0xffa500, 0xffff00],
             lifespan: 500,
             gravityY: 0,
             emitting: false
@@ -158,7 +146,6 @@ class MainScene extends Phaser.Scene {
         this.rcsPortEmitter.setDepth(-1);
         this.rcsStarboardEmitter.setDepth(-1);
 
-        // Timers
         this.time.addEvent({
             delay: this.spawnRate,
             callback: this.spawnEnemy,
@@ -166,7 +153,6 @@ class MainScene extends Phaser.Scene {
             loop: true
         });
 
-        // Collisions
         this.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy, null, this);
         this.physics.add.overlap(this.player, this.enemies, this.hitPlayer, null, this);
         this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
@@ -189,19 +175,16 @@ class MainScene extends Phaser.Scene {
     createTextures() {
         let graphics = this.make.graphics({ x: 0, y: 0, add: false });
 
-        // Bullet: White Circle
         graphics.clear();
         graphics.fillStyle(0xffffff, 1);
         graphics.fillCircle(4, 4, 4);
         graphics.generateTexture('bullet', 8, 8);
 
-        // Coin: Yellow Circle
         graphics.clear();
         graphics.fillStyle(0xffff00, 1);
         graphics.fillCircle(4, 4, 4);
         graphics.generateTexture('coin', 8, 8);
 
-        // Thruster: layered flare (bright core + soft falloff)
         graphics.clear();
         graphics.fillStyle(0xffffff, 0.22);
         graphics.fillCircle(10, 10, 10);
@@ -211,7 +194,6 @@ class MainScene extends Phaser.Scene {
         graphics.fillCircle(10, 10, 3);
         graphics.generateTexture('thruster', 20, 20);
 
-        // Wide soft blob for outer ion plume
         graphics.clear();
         graphics.fillStyle(0xaaccff, 0.2);
         graphics.fillCircle(14, 14, 14);
@@ -219,7 +201,6 @@ class MainScene extends Phaser.Scene {
         graphics.fillCircle(14, 14, 8);
         graphics.generateTexture('thrusterHalo', 28, 28);
 
-        // Side RCS puff (small but readable at higher emitter scale)
         graphics.clear();
         graphics.fillStyle(0x88ccff, 0.42);
         graphics.fillCircle(5, 5, 5);
@@ -229,7 +210,6 @@ class MainScene extends Phaser.Scene {
         graphics.fillCircle(5, 5, 1.5);
         graphics.generateTexture('rcsPuff', 10, 10);
 
-        // Starfield sprites
         graphics.clear();
         graphics.fillStyle(0xffffff, 1);
         graphics.fillCircle(1, 1, 0.75);
@@ -253,7 +233,6 @@ class MainScene extends Phaser.Scene {
         graphics.fillCircle(8, 8, 1.1);
         graphics.generateTexture('starGlow', 16, 16);
 
-        // Cosmic dust particles
         graphics.clear();
         graphics.fillStyle(0x888888, 0.15);
         graphics.fillCircle(2, 2, 2);
@@ -277,7 +256,6 @@ class MainScene extends Phaser.Scene {
             nebula.fillStyle(color, a);
             nebula.fillCircle(cx, cy, r);
         };
-        // Enhanced nebula effects for more sci-fi atmosphere
         mist(W * 0.18, H * 0.72, 220, 0x1a2a6e, 0.08);
         mist(W * 0.82, H * 0.22, 260, 0x3d1a5c, 0.07);
         mist(W * 0.55, H * 0.48, 180, 0x0d3d55, 0.06);
@@ -289,7 +267,6 @@ class MainScene extends Phaser.Scene {
         nebula.setScrollFactor(0);
 
         const tints = [0xffffff, 0xdde8ff, 0xffeedd, 0xccd8ff, 0xaaccff, 0xffdddd];
-        // scrollFactor < 1 = deeper layer (moves slower vs camera = parallax). Sky/nebula stay HUD-fixed.
         const layerDefs = [
             { key: 'cosmicDust', count: 300, depth: -385, scaleMin: 0.2, scaleMax: 0.8, alphaMin: 0.05, alphaMax: 0.2, scrollFactor: 0.08, twinkle: 0 },
             { key: 'starPin', count: 400, depth: -380, scaleMin: 0.3, scaleMax: 1.2, alphaMin: 0.2, alphaMax: 0.8, scrollFactor: 0.12, twinkle: 0 },
@@ -373,45 +350,37 @@ class MainScene extends Phaser.Scene {
         this.updateStarfield(time, delta);
         if (this.health <= 0) return;
 
-        // Player Movement
         this.handlePlayerMovement();
         this.clampPlayerSpeed();
         this.maybeRecenterWorld();
 
-        // Auto Firing
         if (time > this.lastFired) {
             this.fireBullet();
             this.lastFired = time + this.fireRate;
         }
 
-        // Enemy Movement (Follow player)
         this.enemies.getChildren().forEach(enemy => {
             this.physics.moveToObject(enemy, this.player, this.enemyMaxSpeed);
         });
 
         this.cullDistantEnemies();
 
-        // Coin Magnet Logic
         const magnetRange = 100;
         const baseMagnetSpeed = 100;
 
         this.coins.getChildren().forEach(coin => {
             const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, coin.x, coin.y);
             if (distance < magnetRange) {
-                // Calculation: normalized distance from 0 (at magnetRange) to 1 (at player)
                 const proximity = 1 - (distance / magnetRange);
-                // Accelerated speed: base speed plus an extra boost that grows quadratically
                 const speed = baseMagnetSpeed + (proximity * proximity * 600);
                 this.physics.moveToObject(coin, this.player, speed);
             } else {
-                // Stop the coin if it's no longer in range (and was moving)
                 if (coin.body.velocity.x !== 0 || coin.body.velocity.y !== 0) {
                     coin.body.setVelocity(0, 0);
                 }
             }
         });
 
-        // Cleanup bullets that are far from the player (world space)
         const px = this.player.x;
         const py = this.player.y;
         const bd2 = this.bulletMaxDistance * this.bulletMaxDistance;
@@ -426,7 +395,6 @@ class MainScene extends Phaser.Scene {
             }
         });
 
-        // Update Radar
         this.updateRadar();
     }
 
@@ -463,20 +431,16 @@ class MainScene extends Phaser.Scene {
 
         this.radarGraphics.clear();
 
-        // Draw radar background
         this.radarGraphics.fillStyle(0x000000, 0.5);
         this.radarGraphics.fillCircle(this.radarX, this.radarY, this.radarRadius);
 
-        // Draw radar border
         this.radarGraphics.lineStyle(2, 0xffffff, 0.8);
         this.radarGraphics.strokeCircle(this.radarX, this.radarY, this.radarRadius);
 
-        // Draw range circles
         this.radarGraphics.lineStyle(1, 0x444444, 0.5);
         this.radarGraphics.strokeCircle(this.radarX, this.radarY, this.radarRadius * 0.5);
         this.radarGraphics.strokeCircle(this.radarX, this.radarY, this.radarRadius * 0.25);
 
-        // Draw crosshairs
         this.radarGraphics.lineStyle(1, 0x666666, 0.3);
         this.radarGraphics.lineBetween(this.radarX - this.radarRadius, this.radarY, this.radarX + this.radarRadius, this.radarY);
         this.radarGraphics.lineBetween(this.radarX, this.radarY - this.radarRadius, this.radarX, this.radarY + this.radarRadius);
@@ -485,7 +449,6 @@ class MainScene extends Phaser.Scene {
         const py = this.player.y;
         const scale = this.radarRadius / this.radarRange;
 
-        // Draw enemies
         this.enemies.getChildren().forEach(enemy => {
             const dx = enemy.x - px;
             const dy = enemy.y - py;
@@ -493,12 +456,11 @@ class MainScene extends Phaser.Scene {
             if (dist <= this.radarRange) {
                 const radarX = this.radarX + dx * scale;
                 const radarY = this.radarY + dy * scale;
-                this.radarGraphics.fillStyle(0xff0000, 0.8); // Red for enemies
+                this.radarGraphics.fillStyle(0xff0000, 0.8);
                 this.radarGraphics.fillCircle(radarX, radarY, 3);
             }
         });
 
-        // Draw coins
         this.coins.getChildren().forEach(coin => {
             const dx = coin.x - px;
             const dy = coin.y - py;
@@ -506,12 +468,11 @@ class MainScene extends Phaser.Scene {
             if (dist <= this.radarRange) {
                 const radarX = this.radarX + dx * scale;
                 const radarY = this.radarY + dy * scale;
-                this.radarGraphics.fillStyle(0xffff00, 0.8); // Yellow for coins
+                this.radarGraphics.fillStyle(0xffff00, 0.8);
                 this.radarGraphics.fillCircle(radarX, radarY, 2);
             }
         });
 
-        // Draw player indicator (small white dot at center)
         this.radarGraphics.fillStyle(0xffffff, 1);
         this.radarGraphics.fillCircle(this.radarX, this.radarY, 2);
     }
@@ -546,7 +507,6 @@ class MainScene extends Phaser.Scene {
         const thrust = 300;
         const r = this.player.rotation;
 
-        // Handle Rotation
         if (this.cursors.left.isDown || this.wasd.A.isDown) {
             this.player.setAngularVelocity(-220);
         } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
@@ -655,22 +615,20 @@ class MainScene extends Phaser.Scene {
     }
 
     fireBullet() {
-        // Spawn bullet slightly in front of the player based on rotation
         const offset = 20;
         const spawnX = this.player.x + Math.cos(this.player.rotation) * offset;
         const spawnY = this.player.y + Math.sin(this.player.rotation) * offset;
-        
+
         let bullet = this.bullets.get(spawnX, spawnY);
 
         if (bullet) {
             bullet.setActive(true);
             bullet.setVisible(true);
-            
+
             const bulletSpeed = 500;
-            // Fire in the direction the player is currently facing
             const vx = Math.cos(this.player.rotation) * bulletSpeed;
             const vy = Math.sin(this.player.rotation) * bulletSpeed;
-            
+
             bullet.body.setVelocity(vx, vy);
         }
     }
@@ -700,8 +658,7 @@ class MainScene extends Phaser.Scene {
     }
 
     spawnCoin(x, y) {
-        let coin = this.coins.create(x, y, 'coin');
-        // Simple scale effect or physics properties could be added here
+        this.coins.create(x, y, 'coin');
     }
 
     collectCoin(player, coin) {
@@ -715,7 +672,7 @@ class MainScene extends Phaser.Scene {
         bullet.setActive(false);
         bullet.setVisible(false);
         bullet.body.setVelocity(0, 0);
-        
+
         this.explosionEmitter.explode(15, enemy.x, enemy.y);
         this.spawnCoin(enemy.x, enemy.y);
         enemy.destroy();
@@ -730,12 +687,10 @@ class MainScene extends Phaser.Scene {
         this.explosionEmitter.explode(15, enemy.x, enemy.y);
         enemy.destroy();
 
-        // Play damage sound
         this.sound.play('playerDamage');
 
-        // Screen effects: Flash and Shake
-        this.cameras.main.flash(200, 255, 0, 0); // Red flash
-        this.cameras.main.shake(200, 0.01);      // Subtle shake
+        this.cameras.main.flash(200, 255, 0, 0);
+        this.cameras.main.shake(200, 0.01);
 
         this.health -= 10;
         this.healthText.setText('Health: ' + this.health);
@@ -751,13 +706,11 @@ class MainScene extends Phaser.Scene {
             this.physics.pause();
             this.player.setTint(0xff0000);
             this.player.setVisible(false);
-            
-            // Big particle explosion for player death
+
             this.explosionEmitter.explode(100, this.player.x, this.player.y);
-            
-            // More intense camera effects on death
+
             this.cameras.main.shake(500, 0.05);
-            this.cameras.main.flash(500, 255, 255, 255); // White flash for death
+            this.cameras.main.flash(500, 255, 255, 255);
 
             const cam = this.cameras.main;
             this.add
@@ -768,23 +721,3 @@ class MainScene extends Phaser.Scene {
         }
     }
 }
-
-const config = {
-    type: Phaser.AUTO,
-    parent: 'game-container',
-    width: 800,
-    height: 650,
-    audio: {
-        disableWebAudio: false
-    },
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { y: 0 },
-            debug: false
-        }
-    },
-    scene: MainScene
-};
-
-const game = new Phaser.Game(config);
