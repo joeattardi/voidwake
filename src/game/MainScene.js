@@ -310,7 +310,7 @@ export default class MainScene extends Phaser.Scene {
                     twinklePhase: Phaser.Math.FloatBetween(0, Math.PI * 2)
                 });
             }
-            return { stars };
+            return { stars, scrollFactor: def.scrollFactor };
         });
     }
 
@@ -322,7 +322,6 @@ export default class MainScene extends Phaser.Scene {
         const driftY = this.starfieldAmbientVy * dt * 0.14;
 
         const cam = this.cameras.main;
-        const mid = cam.midPoint;
         const W = this.scale.width;
         const H = this.scale.height;
         const halfDiag = Math.sqrt((W * 0.5) ** 2 + (H * 0.5) ** 2);
@@ -331,16 +330,20 @@ export default class MainScene extends Phaser.Scene {
         const minSpawnR = halfDiag + 55;
 
         this.starfieldLayers.forEach((layer) => {
+            const sf = layer.scrollFactor;
+            const centerX = cam.scrollX * sf + W * 0.5;
+            const centerY = cam.scrollY * sf + H * 0.5;
+
             layer.stars.forEach((star) => {
                 star.img.x += driftX;
                 star.img.y += driftY;
 
-                const dx = star.img.x - mid.x;
-                const dy = star.img.y - mid.y;
+                const dx = star.img.x - centerX;
+                const dy = star.img.y - centerY;
                 if (dx * dx + dy * dy > recycleR2) {
                     const ang = Phaser.Math.FloatBetween(0, Math.PI * 2);
                     const d = Phaser.Math.FloatBetween(minSpawnR, recycleR * 0.94);
-                    star.img.setPosition(mid.x + Math.cos(ang) * d, mid.y + Math.sin(ang) * d);
+                    star.img.setPosition(centerX + Math.cos(ang) * d, centerY + Math.sin(ang) * d);
                 }
 
                 if (star.twinkle > 0) {
@@ -423,9 +426,10 @@ export default class MainScene extends Phaser.Scene {
         });
         if (this.starfieldLayers) {
             this.starfieldLayers.forEach((layer) => {
+                const sf = layer.scrollFactor;
                 layer.stars.forEach((star) => {
-                    star.img.x -= ox;
-                    star.img.y -= oy;
+                    star.img.x -= ox * sf;
+                    star.img.y -= oy * sf;
                 });
             });
         }
