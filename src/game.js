@@ -23,8 +23,19 @@ class MainScene extends Phaser.Scene {
         this.starfieldLayers = null;
         this.starfieldAmbientVx = 6;
         this.starfieldAmbientVy = -2.5;
-        this.starfieldOffX = 0;
-        this.starfieldOffY = 0;
+        /** World recenters when the player exceeds this distance from origin (float stability). */
+        this.worldRecenterThreshold = 12000;
+        this.maxEnemies = 220;
+        this.enemyCullDistance = 3400;
+        this.bulletMaxDistance = 1600;
+        /** True speed cap (px/s); Arcade maxVelocity is per-axis, so we clamp vector length here. */
+        this.playerMaxSpeed = 220;
+        // Radar properties
+        this.radarRange = 2500; // World units to detect
+        this.radarRadius = 80; // Screen pixels for radar display
+        this.radarGraphics = null;
+        this.radarX = 650; // Position on screen (bottom right)
+        this.radarY = 450;
     }
 
     preload() {
@@ -42,13 +53,17 @@ class MainScene extends Phaser.Scene {
         this.createTextures();
         this.setupStarfield();
 
+        // Infinite arena: large physics bounds, no edge collision; camera follows the player.
+        this.physics.world.setBounds(-2e6, -2e6, 4e6, 4e6);
+        this.physics.world.setBoundsCollision(false, false, false, false);
+
         // Setup Player
-        this.player = this.physics.add.sprite(400, 300, 'player');
-        this.player.setCollideWorldBounds(true);
+        this.player = this.physics.add.sprite(0, 0, 'player');
+        this.player.setCollideWorldBounds(false);
         this.player.setRotation(-Math.PI / 2); // Start pointing up
         this.player.setDamping(true);
         this.player.setDrag(0.99); // Slight friction
-        this.player.setMaxVelocity(400);
+        this.player.setMaxVelocity(this.playerMaxSpeed, this.playerMaxSpeed);
 
         // Setup Groups
         this.bullets = this.physics.add.group({
@@ -64,10 +79,17 @@ class MainScene extends Phaser.Scene {
         this.wasd = this.input.keyboard.addKeys('W,A,S,D');
         this.qeKeys = this.input.keyboard.addKeys('Q,E');
 
-        // UI
-        this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '24px', fill: '#fff' });
-        this.healthText = this.add.text(16, 48, 'Health: 100', { fontSize: '24px', fill: '#fff' });
-        this.coinText = this.add.text(16, 80, 'Coins: 0', { fontSize: '24px', fill: '#fff' });
+        // UI (fixed to viewport while the world scrolls)
+        this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0);
+        this.healthText = this.add.text(16, 48, 'Health: 100', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0);
+        this.coinText = this.add.text(16, 80, 'Coins: 0', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0);
+
+        // Radar
+        this.radarGraphics = this.add.graphics().setScrollFactor(0);
+        this.radarGraphics.setDepth(10); // Above other UI
+
+        this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+        this.cameras.main.setRoundPixels(true);
 
         // Particle Emitter for Explosions
         this.explosionEmitter = this.add.particles(0, 0, 'bullet', {
@@ -219,6 +241,14 @@ class MainScene extends Phaser.Scene {
         graphics.fillStyle(0xffffff, 1);
         graphics.fillCircle(8, 8, 1.1);
         graphics.generateTexture('starGlow', 16, 16);
+
+        // Cosmic dust particles
+        graphics.clear();
+        graphics.fillStyle(0x888888, 0.15);
+        graphics.fillCircle(2, 2, 2);
+        graphics.fillStyle(0xaaaaaa, 0.25);
+        graphics.fillCircle(2, 2, 1);
+        graphics.generateTexture('cosmicDust', 4, 4);
     }
 
     setupStarfield() {
@@ -229,31 +259,43 @@ class MainScene extends Phaser.Scene {
         sky.fillGradientStyle(0x03050c, 0x050a18, 0x080c28, 0x10082a, 1);
         sky.fillRect(0, 0, W, H);
         sky.setDepth(-400);
+        sky.setScrollFactor(0);
 
         const nebula = this.add.graphics();
         const mist = (cx, cy, r, color, a) => {
             nebula.fillStyle(color, a);
             nebula.fillCircle(cx, cy, r);
         };
-        mist(W * 0.18, H * 0.72, 220, 0x1a2a6e, 0.07);
-        mist(W * 0.82, H * 0.22, 260, 0x3d1a5c, 0.06);
-        mist(W * 0.55, H * 0.48, 180, 0x0d3d55, 0.055);
-        mist(W * 0.08, H * 0.18, 140, 0x2244aa, 0.04);
+        // Enhanced nebula effects for more sci-fi atmosphere
+        mist(W * 0.18, H * 0.72, 220, 0x1a2a6e, 0.08);
+        mist(W * 0.82, H * 0.22, 260, 0x3d1a5c, 0.07);
+        mist(W * 0.55, H * 0.48, 180, 0x0d3d55, 0.06);
+        mist(W * 0.08, H * 0.18, 140, 0x2244aa, 0.05);
+        mist(W * 0.35, H * 0.85, 190, 0x2a1b3d, 0.04);
+        mist(W * 0.75, H * 0.15, 160, 0x1a4a6e, 0.055);
+        mist(W * 0.92, H * 0.78, 120, 0x4a2a5c, 0.045);
         nebula.setDepth(-390);
+        nebula.setScrollFactor(0);
 
-        const tints = [0xffffff, 0xdde8ff, 0xffeedd, 0xccd8ff];
+        const tints = [0xffffff, 0xdde8ff, 0xffeedd, 0xccd8ff, 0xaaccff, 0xffdddd];
+        // scrollFactor < 1 = deeper layer (moves slower vs camera = parallax). Sky/nebula stay HUD-fixed.
         const layerDefs = [
-            { key: 'starPin', count: 160, depth: -380, scaleMin: 0.55, scaleMax: 1.05, alphaMin: 0.32, alphaMax: 0.78, parallax: 0.038, twinkle: 0 },
-            { key: 'starSoft', count: 72, depth: -370, scaleMin: 0.45, scaleMax: 0.95, alphaMin: 0.42, alphaMax: 0.92, parallax: 0.082, twinkle: 0.12 },
-            { key: 'starGlow', count: 26, depth: -360, scaleMin: 0.5, scaleMax: 1.15, alphaMin: 0.5, alphaMax: 1, parallax: 0.135, twinkle: 0.22 }
+            { key: 'cosmicDust', count: 300, depth: -385, scaleMin: 0.2, scaleMax: 0.8, alphaMin: 0.05, alphaMax: 0.2, scrollFactor: 0.08, twinkle: 0 },
+            { key: 'starPin', count: 400, depth: -380, scaleMin: 0.3, scaleMax: 1.2, alphaMin: 0.2, alphaMax: 0.8, scrollFactor: 0.12, twinkle: 0 },
+            { key: 'starPin', count: 250, depth: -375, scaleMin: 0.4, scaleMax: 1.0, alphaMin: 0.3, alphaMax: 0.9, scrollFactor: 0.25, twinkle: 0.08 },
+            { key: 'starSoft', count: 180, depth: -370, scaleMin: 0.35, scaleMax: 1.1, alphaMin: 0.35, alphaMax: 0.95, scrollFactor: 0.4, twinkle: 0.15 },
+            { key: 'starGlow', count: 80, depth: -360, scaleMin: 0.4, scaleMax: 1.3, alphaMin: 0.4, alphaMax: 1, scrollFactor: 0.68, twinkle: 0.25 }
         ];
+
+        const spreadX = W * 6;
+        const spreadY = H * 6;
 
         this.starfieldLayers = layerDefs.map((def) => {
             const stars = [];
             for (let i = 0; i < def.count; i++) {
                 const img = this.add.image(
-                    Phaser.Math.Between(0, W),
-                    Phaser.Math.Between(0, H),
+                    Phaser.Math.FloatBetween(-spreadX * 0.5, spreadX * 0.5),
+                    Phaser.Math.FloatBetween(-spreadY * 0.5, spreadY * 0.5),
                     def.key
                 );
                 const s = Phaser.Math.FloatBetween(def.scaleMin, def.scaleMax);
@@ -264,18 +306,18 @@ class MainScene extends Phaser.Scene {
                 img.setTint(Phaser.Utils.Array.GetRandom(tints));
                 if (def.key === 'starGlow' || def.key === 'starSoft') {
                     img.setBlendMode(Phaser.BlendModes.ADD);
+                } else if (def.key === 'cosmicDust') {
+                    img.setBlendMode(Phaser.BlendModes.NORMAL);
                 }
+                img.setScrollFactor(def.scrollFactor, def.scrollFactor);
                 stars.push({
                     img,
-                    baseX: img.x,
-                    baseY: img.y,
                     baseAlpha: baseA,
                     twinkle: def.twinkle,
-                    twinklePhase: Phaser.Math.FloatBetween(0, Math.PI * 2),
-                    parallax: def.parallax
+                    twinklePhase: Phaser.Math.FloatBetween(0, Math.PI * 2)
                 });
             }
-            return { stars, parallax: def.parallax };
+            return { stars };
         });
     }
 
@@ -283,27 +325,31 @@ class MainScene extends Phaser.Scene {
         if (!this.starfieldLayers) return;
 
         const dt = delta / 1000;
-        let vx = this.starfieldAmbientVx;
-        let vy = this.starfieldAmbientVy;
-        if (this.health > 0 && this.player && this.player.body) {
-            vx -= this.player.body.velocity.x * 0.06;
-            vy -= this.player.body.velocity.y * 0.06;
-        }
-        this.starfieldOffX += vx * dt;
-        this.starfieldOffY += vy * dt;
+        const driftX = this.starfieldAmbientVx * dt * 0.14;
+        const driftY = this.starfieldAmbientVy * dt * 0.14;
 
+        const cam = this.cameras.main;
+        const mid = cam.midPoint;
         const W = this.scale.width;
         const H = this.scale.height;
+        const halfDiag = Math.sqrt((W * 0.5) ** 2 + (H * 0.5) ** 2);
+        const recycleR = halfDiag + Math.max(W, H) * 0.62;
+        const recycleR2 = recycleR * recycleR;
+        const minSpawnR = halfDiag + 55;
 
         this.starfieldLayers.forEach((layer) => {
-            const p = layer.parallax;
-            const ox = this.starfieldOffX * p;
-            const oy = this.starfieldOffY * p;
             layer.stars.forEach((star) => {
-                const x = star.baseX - ox;
-                const y = star.baseY - oy;
-                star.img.x = Phaser.Math.Wrap(x, 0, W);
-                star.img.y = Phaser.Math.Wrap(y, 0, H);
+                star.img.x += driftX;
+                star.img.y += driftY;
+
+                const dx = star.img.x - mid.x;
+                const dy = star.img.y - mid.y;
+                if (dx * dx + dy * dy > recycleR2) {
+                    const ang = Phaser.Math.FloatBetween(0, Math.PI * 2);
+                    const d = Phaser.Math.FloatBetween(minSpawnR, recycleR * 0.94);
+                    star.img.setPosition(mid.x + Math.cos(ang) * d, mid.y + Math.sin(ang) * d);
+                }
+
                 if (star.twinkle > 0) {
                     const pulse = Math.sin(time * 0.0028 + star.twinklePhase) * 0.5 + 0.5;
                     star.img.setAlpha(star.baseAlpha * (1 - star.twinkle + pulse * star.twinkle));
@@ -318,6 +364,8 @@ class MainScene extends Phaser.Scene {
 
         // Player Movement
         this.handlePlayerMovement();
+        this.clampPlayerSpeed();
+        this.maybeRecenterWorld();
 
         // Auto Firing
         if (time > this.lastFired) {
@@ -329,6 +377,8 @@ class MainScene extends Phaser.Scene {
         this.enemies.getChildren().forEach(enemy => {
             this.physics.moveToObject(enemy, this.player, 100);
         });
+
+        this.cullDistantEnemies();
 
         // Coin Magnet Logic
         const magnetRange = 100;
@@ -350,13 +400,135 @@ class MainScene extends Phaser.Scene {
             }
         });
 
-        // Cleanup bullets that leave the screen
+        // Cleanup bullets that are far from the player (world space)
+        const px = this.player.x;
+        const py = this.player.y;
+        const bd2 = this.bulletMaxDistance * this.bulletMaxDistance;
         this.bullets.getChildren().forEach(bullet => {
-            if (bullet.y < 0 || bullet.y > 600 || bullet.x < 0 || bullet.x > 800) {
+            if (!bullet.active) return;
+            const dx = bullet.x - px;
+            const dy = bullet.y - py;
+            if (dx * dx + dy * dy > bd2) {
                 bullet.setActive(false);
                 bullet.setVisible(false);
+                bullet.body.setVelocity(0, 0);
             }
         });
+
+        // Update Radar
+        this.updateRadar();
+    }
+
+    maybeRecenterWorld() {
+        const t = this.worldRecenterThreshold;
+        if (Math.abs(this.player.x) < t && Math.abs(this.player.y) < t) {
+            return;
+        }
+        const ox = this.player.x;
+        const oy = this.player.y;
+        this.player.setPosition(0, 0);
+        this.enemies.getChildren().forEach((e) => {
+            e.setPosition(e.x - ox, e.y - oy);
+        });
+        this.coins.getChildren().forEach((c) => {
+            c.setPosition(c.x - ox, c.y - oy);
+        });
+        this.bullets.getChildren().forEach((b) => {
+            if (!b.active) return;
+            b.setPosition(b.x - ox, b.y - oy);
+        });
+        if (this.starfieldLayers) {
+            this.starfieldLayers.forEach((layer) => {
+                layer.stars.forEach((star) => {
+                    star.img.x -= ox;
+                    star.img.y -= oy;
+                });
+            });
+        }
+    }
+
+    updateRadar() {
+        if (!this.radarGraphics) return;
+
+        this.radarGraphics.clear();
+
+        // Draw radar background
+        this.radarGraphics.fillStyle(0x000000, 0.5);
+        this.radarGraphics.fillCircle(this.radarX, this.radarY, this.radarRadius);
+
+        // Draw radar border
+        this.radarGraphics.lineStyle(2, 0xffffff, 0.8);
+        this.radarGraphics.strokeCircle(this.radarX, this.radarY, this.radarRadius);
+
+        // Draw range circles
+        this.radarGraphics.lineStyle(1, 0x444444, 0.5);
+        this.radarGraphics.strokeCircle(this.radarX, this.radarY, this.radarRadius * 0.5);
+        this.radarGraphics.strokeCircle(this.radarX, this.radarY, this.radarRadius * 0.25);
+
+        // Draw crosshairs
+        this.radarGraphics.lineStyle(1, 0x666666, 0.3);
+        this.radarGraphics.lineBetween(this.radarX - this.radarRadius, this.radarY, this.radarX + this.radarRadius, this.radarY);
+        this.radarGraphics.lineBetween(this.radarX, this.radarY - this.radarRadius, this.radarX, this.radarY + this.radarRadius);
+
+        const px = this.player.x;
+        const py = this.player.y;
+        const scale = this.radarRadius / this.radarRange;
+
+        // Draw enemies
+        this.enemies.getChildren().forEach(enemy => {
+            const dx = enemy.x - px;
+            const dy = enemy.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= this.radarRange) {
+                const radarX = this.radarX + dx * scale;
+                const radarY = this.radarY + dy * scale;
+                this.radarGraphics.fillStyle(0xff0000, 0.8); // Red for enemies
+                this.radarGraphics.fillCircle(radarX, radarY, 3);
+            }
+        });
+
+        // Draw coins
+        this.coins.getChildren().forEach(coin => {
+            const dx = coin.x - px;
+            const dy = coin.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= this.radarRange) {
+                const radarX = this.radarX + dx * scale;
+                const radarY = this.radarY + dy * scale;
+                this.radarGraphics.fillStyle(0xffff00, 0.8); // Yellow for coins
+                this.radarGraphics.fillCircle(radarX, radarY, 2);
+            }
+        });
+
+        // Draw player indicator (small white dot at center)
+        this.radarGraphics.fillStyle(0xffffff, 1);
+        this.radarGraphics.fillCircle(this.radarX, this.radarY, 2);
+    }
+
+    cullDistantEnemies() {
+        const px = this.player.x;
+        const py = this.player.y;
+        const d2 = this.enemyCullDistance * this.enemyCullDistance;
+        this.enemies.getChildren().forEach((enemy) => {
+            const dx = enemy.x - px;
+            const dy = enemy.y - py;
+            if (dx * dx + dy * dy > d2) {
+                enemy.destroy();
+            }
+        });
+    }
+
+    clampPlayerSpeed() {
+        if (!this.player || !this.player.body) return;
+        const body = this.player.body;
+        const vx = body.velocity.x;
+        const vy = body.velocity.y;
+        const m2 = vx * vx + vy * vy;
+        const max = this.playerMaxSpeed;
+        const max2 = max * max;
+        if (m2 <= max2 || m2 < 1e-6) return;
+        const inv = max / Math.sqrt(m2);
+        body.setVelocity(vx * inv, vy * inv);
     }
 
     handlePlayerMovement() {
@@ -493,18 +665,27 @@ class MainScene extends Phaser.Scene {
     }
 
     spawnEnemy() {
-        // Spawn enemy at random edge of screen
-        let x, y;
-        if (Math.random() > 0.5) {
-            x = Math.random() > 0.5 ? 0 : 800;
-            y = Math.random() * 600;
-        } else {
-            x = Math.random() * 800;
-            y = Math.random() > 0.5 ? 0 : 600;
+        if (this.health <= 0 || !this.player) {
+            return;
+        }
+        if (this.enemies.countActive(true) >= this.maxEnemies) {
+            return;
         }
 
-        let enemy = this.enemies.create(x, y, 'enemy');
-        enemy.setCollideWorldBounds(true);
+        const cam = this.cameras.main;
+        const halfW = cam.width * 0.5;
+        const halfH = cam.height * 0.5;
+        const margin = 90;
+        const minR = Math.sqrt(halfW * halfW + halfH * halfH) + margin;
+        const maxR = minR + 520;
+
+        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        const dist = Phaser.Math.FloatBetween(minR, maxR);
+        const x = this.player.x + Math.cos(angle) * dist;
+        const y = this.player.y + Math.sin(angle) * dist;
+
+        const enemy = this.enemies.create(x, y, 'enemy');
+        enemy.setCollideWorldBounds(false);
     }
 
     spawnCoin(x, y) {
@@ -567,7 +748,11 @@ class MainScene extends Phaser.Scene {
             this.cameras.main.shake(500, 0.05);
             this.cameras.main.flash(500, 255, 255, 255); // White flash for death
 
-            this.add.text(400, 300, 'GAME OVER', { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
+            const cam = this.cameras.main;
+            this.add
+                .text(cam.width * 0.5, cam.height * 0.5, 'GAME OVER', { fontSize: '64px', fill: '#fff' })
+                .setScrollFactor(0)
+                .setOrigin(0.5);
             this.sound.play('playerDeath');
         }
     }
