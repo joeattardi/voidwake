@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { Player } from './Player';
 
 interface StarEntry {
     img: Phaser.GameObjects.Image;
@@ -13,15 +14,13 @@ interface StarfieldLayer {
 }
 
 export default class MainScene extends Phaser.Scene {
-    private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+    private player!: Player;
     private enemies!: Phaser.Physics.Arcade.Group;
     private bullets!: Phaser.Physics.Arcade.Group;
     private coins!: Phaser.Physics.Arcade.Group;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-    private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
-    private qeKeys!: Record<string, Phaser.Input.Keyboard.Key>;
+    private keys!: Record<string, Phaser.Input.Keyboard.Key>;
     private score = 0;
-    private health = 100;
     private scoreText!: Phaser.GameObjects.Text;
     private healthText!: Phaser.GameObjects.Text;
     private coinText!: Phaser.GameObjects.Text;
@@ -67,7 +66,6 @@ export default class MainScene extends Phaser.Scene {
 
     create(): void {
         this.score = 0;
-        this.health = 100;
         this.coinCount = 0;
         this.lastFired = 0;
 
@@ -79,12 +77,7 @@ export default class MainScene extends Phaser.Scene {
         this.physics.world.setBounds(-2e6, -2e6, 4e6, 4e6);
         this.physics.world.setBoundsCollision(false, false, false, false);
 
-        this.player = this.physics.add.sprite(0, 0, 'player');
-        this.player.setCollideWorldBounds(false);
-        this.player.setRotation(-Math.PI / 2);
-        this.player.setDamping(true);
-        this.player.setDrag(0.99);
-        this.player.setMaxVelocity(this.playerMaxSpeed, this.playerMaxSpeed);
+        this.player = new Player(this, 0, 0);
 
         this.bullets = this.physics.add.group({
             defaultKey: 'bullet',
@@ -95,8 +88,7 @@ export default class MainScene extends Phaser.Scene {
         this.coins = this.physics.add.group();
 
         this.cursors = this.input.keyboard!.createCursorKeys();
-        this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;
-        this.qeKeys = this.input.keyboard!.addKeys('Q,E') as Record<string, Phaser.Input.Keyboard.Key>;
+        this.keys = this.input.keyboard?.addKeys('W,A,S,D,Q,E') as Record<string, Phaser.Input.Keyboard.Key>;
 
         this.scoreText = this.add.text(16, 520, 'Score: 0', { fontSize: '24px', color: '#fff' }).setScrollFactor(0).setDepth(6);
         this.healthText = this.add.text(16, 540, 'Health: 100', { fontSize: '24px', color: '#fff' }).setScrollFactor(0).setDepth(6);
@@ -373,10 +365,13 @@ export default class MainScene extends Phaser.Scene {
 
     update(time: number, delta: number): void {
         this.updateStarfield(time, delta);
-        if (this.health <= 0) return;
 
-        this.handlePlayerMovement();
-        this.clampPlayerSpeed();
+        if (this.player.health <= 0) {
+            return;
+        }
+
+        this.player.update(this.cursors, this.keys);
+
         this.maybeRecenterWorld();
 
         if (time > this.lastFired) {
@@ -521,130 +516,6 @@ export default class MainScene extends Phaser.Scene {
         });
     }
 
-    private clampPlayerSpeed(): void {
-        if (!this.player || !this.player.body) return;
-        const body = this.player.body;
-        const vx = body.velocity.x;
-        const vy = body.velocity.y;
-        const m2 = vx * vx + vy * vy;
-        const max = this.playerMaxSpeed;
-        const max2 = max * max;
-        if (m2 <= max2 || m2 < 1e-6) return;
-        const inv = max / Math.sqrt(m2);
-        body.setVelocity(vx * inv, vy * inv);
-    }
-
-    private handlePlayerMovement(): void {
-        const thrust = 300;
-        const r = this.player.rotation;
-
-        if (this.cursors.left.isDown || this.wasd.A.isDown) {
-            this.player.setAngularVelocity(-220);
-        } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-            this.player.setAngularVelocity(220);
-        } else {
-            this.player.setAngularVelocity(0);
-        }
-
-        let ax = 0;
-        let ay = 0;
-
-        if (this.cursors.up.isDown || this.wasd.W.isDown) {
-            ax += Math.cos(r) * thrust;
-            ay += Math.sin(r) * thrust;
-        } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-            ax -= Math.cos(r) * thrust;
-            ay -= Math.sin(r) * thrust;
-        }
-
-        if (this.qeKeys.Q.isDown) {
-            ax += Math.cos(r - Math.PI / 2) * thrust;
-            ay += Math.sin(r - Math.PI / 2) * thrust;
-        }
-        if (this.qeKeys.E.isDown) {
-            ax += Math.cos(r + Math.PI / 2) * thrust;
-            ay += Math.sin(r + Math.PI / 2) * thrust;
-        }
-
-        this.player.setAcceleration(ax, ay);
-        this.updateThrusterVisual(ax, ay);
-        this.updateThrusterSound(ax, ay);
-
-        const rotatingLeft = this.cursors.left.isDown || this.wasd.A.isDown;
-        const rotatingRight = this.cursors.right.isDown || this.wasd.D.isDown;
-        this.updateManeuverThrusterVisual(rotatingLeft, rotatingRight);
-    }
-
-    private updateThrusterSound(ax: number, ay: number): void {
-        const thrusting = ax * ax + ay * ay >= 1;
-        if (!this.thrusterRumble) {
-            return;
-        }
-        if (thrusting) {
-            const ctx = (this.sound as Phaser.Sound.WebAudioSoundManager).context;
-            if (ctx && ctx.state === 'suspended') {
-                ctx.resume();
-            }
-            if (!this.thrusterRumble.isPlaying) {
-                this.thrusterRumble.play();
-            }
-        } else if (this.thrusterRumble.isPlaying) {
-            this.thrusterRumble.stop();
-        }
-    }
-
-    private updateThrusterVisual(ax: number, ay: number): void {
-        const magSq = ax * ax + ay * ay;
-        if (magSq < 1) {
-            this.thrusterEmitter.emitting = false;
-            this.thrusterHaloEmitter.emitting = false;
-            return;
-        }
-
-        const mag = Math.sqrt(magSq);
-        const nx = ax / mag;
-        const ny = ay / mag;
-        const offset = 14;
-        const px = this.player.x - nx * offset;
-        const py = this.player.y - ny * offset;
-
-        const deg = Phaser.Math.RadToDeg(Math.atan2(-ay, -ax));
-
-        this.thrusterHaloEmitter.setPosition(px, py);
-        (this.thrusterHaloEmitter.ops.angle as { loadConfig(cfg: object): void }).loadConfig({ angle: { min: deg - 38, max: deg + 38 } });
-        this.thrusterHaloEmitter.emitting = true;
-
-        this.thrusterEmitter.setPosition(px, py);
-        (this.thrusterEmitter.ops.angle as { loadConfig(cfg: object): void }).loadConfig({ angle: { min: deg - 26, max: deg + 26 } });
-        this.thrusterEmitter.emitting = true;
-    }
-
-    private updateManeuverThrusterVisual(rotatingLeft: boolean, rotatingRight: boolean): void {
-        const r = this.player.rotation;
-        const d = 13;
-
-        if (rotatingLeft) {
-            const sx = -Math.sin(r);
-            const sy = Math.cos(r);
-            const deg = Phaser.Math.RadToDeg(Math.atan2(sy, sx));
-            this.rcsStarboardEmitter.setPosition(this.player.x + sx * d, this.player.y + sy * d);
-            (this.rcsStarboardEmitter.ops.angle as { loadConfig(cfg: object): void }).loadConfig({ angle: { min: deg - 22, max: deg + 22 } });
-            this.rcsStarboardEmitter.emitting = true;
-            this.rcsPortEmitter.emitting = false;
-        } else if (rotatingRight) {
-            const sx = Math.sin(r);
-            const sy = -Math.cos(r);
-            const deg = Phaser.Math.RadToDeg(Math.atan2(sy, sx));
-            this.rcsPortEmitter.setPosition(this.player.x + sx * d, this.player.y + sy * d);
-            (this.rcsPortEmitter.ops.angle as { loadConfig(cfg: object): void }).loadConfig({ angle: { min: deg - 22, max: deg + 22 } });
-            this.rcsPortEmitter.emitting = true;
-            this.rcsStarboardEmitter.emitting = false;
-        } else {
-            this.rcsPortEmitter.emitting = false;
-            this.rcsStarboardEmitter.emitting = false;
-        }
-    }
-
     private fireBullet(): void {
         const offset = 20;
         const spawnX = this.player.x + Math.cos(this.player.rotation) * offset;
@@ -665,7 +536,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     private spawnEnemy(): void {
-        if (this.health <= 0 || !this.player) {
+        if (this.player?.health <= 0) {
             return;
         }
         if (this.enemies.countActive(true) >= this.maxEnemies) {
@@ -726,10 +597,10 @@ export default class MainScene extends Phaser.Scene {
         this.cameras.main.flash(200, 255, 0, 0);
         this.cameras.main.shake(200, 0.01);
 
-        this.health -= 10;
-        this.healthText.setText('Health: ' + this.health);
+        this.player.health -= 10;
+        this.healthText.setText('Health: ' + this.player.health);
 
-        if (this.health <= 0) {
+        if (this.player.health <= 0) {
             this.thrusterEmitter.emitting = false;
             this.thrusterHaloEmitter.emitting = false;
             this.rcsPortEmitter.emitting = false;
