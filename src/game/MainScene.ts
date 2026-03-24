@@ -35,7 +35,6 @@ export default class MainScene extends Phaser.Scene {
     private readonly maxEnemies = 220;
     private readonly enemyCullDistance = 3400;
     private readonly bulletMaxDistance = 1600;
-    private readonly playerMaxSpeed = 220;
     private readonly enemyMaxSpeed = 200;
     private readonly radarRange = 2500;
     private readonly radarRadius = 40;
@@ -43,11 +42,6 @@ export default class MainScene extends Phaser.Scene {
     private readonly radarX = 750;
     private readonly radarY = 550;
     private explosionEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
-    private thrusterHaloEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
-    private thrusterEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
-    private rcsPortEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
-    private rcsStarboardEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
-    private thrusterRumble!: Phaser.Sound.BaseSound;
 
     constructor() {
         super('MainScene');
@@ -125,52 +119,6 @@ export default class MainScene extends Phaser.Scene {
             gravityY: 0,
             emitting: false
         });
-
-        this.thrusterHaloEmitter = this.add.particles(0, 0, 'thrusterHalo', {
-            lifespan: { min: 220, max: 380 },
-            speed: { min: 35, max: 85 },
-            scale: { start: 1.45, end: 0 },
-            alpha: { start: 0.4, end: 0 },
-            tint: [0xaa77ff, 0x55aaff, 0xff66cc, 0x66eeff],
-            blendMode: 'ADD',
-            frequency: 11,
-            quantity: 3,
-            gravityY: 0,
-            emitting: false
-        });
-        this.thrusterHaloEmitter.setDepth(-2);
-
-        this.thrusterEmitter = this.add.particles(0, 0, 'thruster', {
-            lifespan: { min: 130, max: 240 },
-            speed: { min: 100, max: 260 },
-            scale: { start: 0.78, end: 0 },
-            alpha: { start: 1, end: 0 },
-            tint: [0xffffff, 0xccffff, 0xffee88, 0xff9944, 0xff5522],
-            blendMode: 'ADD',
-            frequency: 7,
-            quantity: 4,
-            gravityY: 0,
-            emitting: false
-        });
-        this.thrusterEmitter.setDepth(-1);
-
-        const makeRcsEmitter = (): Phaser.GameObjects.Particles.ParticleEmitter =>
-            this.add.particles(0, 0, 'rcsPuff', {
-                lifespan: { min: 95, max: 200 },
-                speed: { min: 48, max: 145 },
-                scale: { start: 1.05, end: 0 },
-                alpha: { start: 0.78, end: 0 },
-                tint: [0x77bbff, 0xaaefff, 0xffffff, 0xffddaa],
-                blendMode: 'ADD',
-                frequency: 9,
-                quantity: 2,
-                gravityY: 0,
-                emitting: false
-            });
-        this.rcsPortEmitter = makeRcsEmitter();
-        this.rcsStarboardEmitter = makeRcsEmitter();
-        this.rcsPortEmitter.setDepth(-1);
-        this.rcsStarboardEmitter.setDepth(-1);
 
         this.time.addEvent({
             delay: this.spawnRate,
@@ -707,13 +655,7 @@ export default class MainScene extends Phaser.Scene {
         this.healthText.setText('Health: ' + this.player.health);
 
         if (this.player.health <= 0) {
-            this.thrusterEmitter.emitting = false;
-            this.thrusterHaloEmitter.emitting = false;
-            this.rcsPortEmitter.emitting = false;
-            this.rcsStarboardEmitter.emitting = false;
-            if (this.thrusterRumble && this.thrusterRumble.isPlaying) {
-                this.thrusterRumble.stop();
-            }
+            this.player.stopEffects();
             this.physics.pause();
             this.player.setTint(0xff0000);
             this.player.setVisible(false);
