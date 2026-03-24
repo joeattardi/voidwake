@@ -1,29 +1,31 @@
 {
-  "name": "voidwake",
-  "version": "0.1.0",
-  "description": "A minimal playable Vampire Survivors style space shooter.",
-  "main": "main.js",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit",
-    "preview": "vite preview",
-    "electron": "vite build && electron .",
-    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\""
-  },
-  "dependencies": {
-    "phaser": "^3.90.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
-  },
-  "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "concurrently": "^9.2.1",
-    "electron": "^30.0.1",
-    "typescript": "^6.0.2",
-    "vite": "^8.0.2",
-    "wait-on": "^8.0.5"
-  }
+    "name": "voidwake",
+    "version": "0.1.0",
+    "description": "A minimal playable Vampire Survivors style space shooter.",
+    "main": "main.js",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build",
+        "typecheck": "tsc --noEmit",
+        "format": "prettier --write .",
+        "preview": "vite preview",
+        "electron": "vite build && electron .",
+        "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\""
+    },
+    "dependencies": {
+        "phaser": "^3.90.0",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4"
+    },
+    "devDependencies": {
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "@vitejs/plugin-react": "^6.0.1",
+        "concurrently": "^9.2.1",
+        "electron": "^30.0.1",
+        "prettier": "^3.8.1",
+        "typescript": "^6.0.2",
+        "vite": "^8.0.2",
+        "wait-on": "^8.0.5"
+    }
 }

@@ -5,12 +5,12 @@ import PhaserGame from './components/PhaserGame';
 type Screen = 'menu' | 'game';
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('menu');
+    const [screen, setScreen] = useState<Screen>('menu');
 
-  return (
-    <>
-      {screen === 'menu' && <MainMenu onStartGame={() => setScreen('game')} />}
-      {screen === 'game' && <PhaserGame />}
-    </>
-  );
+    return (
+        <>
+            {screen === 'menu' && <MainMenu onStartGame={() => setScreen('game')} />}
+            {screen === 'game' && <PhaserGame />}
+        </>
+    );
 }

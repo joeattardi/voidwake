@@ -88,11 +88,23 @@ export default class MainScene extends Phaser.Scene {
         this.coins = this.physics.add.group();
 
         this.cursors = this.input.keyboard!.createCursorKeys();
-        this.keys = this.input.keyboard?.addKeys('W,A,S,D,Q,E') as Record<string, Phaser.Input.Keyboard.Key>;
+        this.keys = this.input.keyboard?.addKeys('W,A,S,D,Q,E') as Record<
+            string,
+            Phaser.Input.Keyboard.Key
+        >;
 
-        this.scoreText = this.add.text(16, 520, 'Score: 0', { fontSize: '24px', color: '#fff' }).setScrollFactor(0).setDepth(6);
-        this.healthText = this.add.text(16, 540, 'Health: 100', { fontSize: '24px', color: '#fff' }).setScrollFactor(0).setDepth(6);
-        this.coinText = this.add.text(16, 560, 'Coins: 0', { fontSize: '24px', color: '#fff' }).setScrollFactor(0).setDepth(6);
+        this.scoreText = this.add
+            .text(16, 520, 'Score: 0', { fontSize: '24px', color: '#fff' })
+            .setScrollFactor(0)
+            .setDepth(6);
+        this.healthText = this.add
+            .text(16, 540, 'Health: 100', { fontSize: '24px', color: '#fff' })
+            .setScrollFactor(0)
+            .setDepth(6);
+        this.coinText = this.add
+            .text(16, 560, 'Coins: 0', { fontSize: '24px', color: '#fff' })
+            .setScrollFactor(0)
+            .setDepth(6);
 
         const panelGraphics = this.add.graphics().setScrollFactor(0);
         panelGraphics.fillStyle(0x000000, 1.0);
@@ -167,9 +179,27 @@ export default class MainScene extends Phaser.Scene {
             loop: true
         });
 
-        this.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
-        this.physics.add.overlap(this.player, this.enemies, this.hitPlayer as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
-        this.physics.add.overlap(this.player, this.coins, this.collectCoin as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
+        this.physics.add.overlap(
+            this.bullets,
+            this.enemies,
+            this.hitEnemy as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+            undefined,
+            this
+        );
+        this.physics.add.overlap(
+            this.player,
+            this.enemies,
+            this.hitPlayer as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+            undefined,
+            this
+        );
+        this.physics.add.overlap(
+            this.player,
+            this.coins,
+            this.collectCoin as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+            undefined,
+            this
+        );
 
         this.thrusterRumble = this.sound.add('thrusterRumble', {
             loop: true,
@@ -282,11 +312,61 @@ export default class MainScene extends Phaser.Scene {
 
         const tints = [0xffffff, 0xdde8ff, 0xffeedd, 0xccd8ff, 0xaaccff, 0xffdddd];
         const layerDefs = [
-            { key: 'cosmicDust', count: 300, depth: -385, scaleMin: 0.2, scaleMax: 0.8, alphaMin: 0.05, alphaMax: 0.2, scrollFactor: 0.08, twinkle: 0 },
-            { key: 'starPin', count: 400, depth: -380, scaleMin: 0.3, scaleMax: 1.2, alphaMin: 0.2, alphaMax: 0.8, scrollFactor: 0.12, twinkle: 0 },
-            { key: 'starPin', count: 250, depth: -375, scaleMin: 0.4, scaleMax: 1.0, alphaMin: 0.3, alphaMax: 0.9, scrollFactor: 0.25, twinkle: 0.08 },
-            { key: 'starSoft', count: 180, depth: -370, scaleMin: 0.35, scaleMax: 1.1, alphaMin: 0.35, alphaMax: 0.95, scrollFactor: 0.4, twinkle: 0.15 },
-            { key: 'starGlow', count: 80, depth: -360, scaleMin: 0.4, scaleMax: 1.3, alphaMin: 0.4, alphaMax: 1, scrollFactor: 0.68, twinkle: 0.25 }
+            {
+                key: 'cosmicDust',
+                count: 300,
+                depth: -385,
+                scaleMin: 0.2,
+                scaleMax: 0.8,
+                alphaMin: 0.05,
+                alphaMax: 0.2,
+                scrollFactor: 0.08,
+                twinkle: 0
+            },
+            {
+                key: 'starPin',
+                count: 400,
+                depth: -380,
+                scaleMin: 0.3,
+                scaleMax: 1.2,
+                alphaMin: 0.2,
+                alphaMax: 0.8,
+                scrollFactor: 0.12,
+                twinkle: 0
+            },
+            {
+                key: 'starPin',
+                count: 250,
+                depth: -375,
+                scaleMin: 0.4,
+                scaleMax: 1.0,
+                alphaMin: 0.3,
+                alphaMax: 0.9,
+                scrollFactor: 0.25,
+                twinkle: 0.08
+            },
+            {
+                key: 'starSoft',
+                count: 180,
+                depth: -370,
+                scaleMin: 0.35,
+                scaleMax: 1.1,
+                alphaMin: 0.35,
+                alphaMax: 0.95,
+                scrollFactor: 0.4,
+                twinkle: 0.15
+            },
+            {
+                key: 'starGlow',
+                count: 80,
+                depth: -360,
+                scaleMin: 0.4,
+                scaleMax: 1.3,
+                alphaMin: 0.4,
+                alphaMax: 1,
+                scrollFactor: 0.68,
+                twinkle: 0.25
+            }
         ];
 
         const spreadX = W * 6;
@@ -379,7 +459,7 @@ export default class MainScene extends Phaser.Scene {
             this.lastFired = time + this.fireRate;
         }
 
-        this.enemies.getChildren().forEach(enemy => {
+        this.enemies.getChildren().forEach((enemy) => {
             this.physics.moveToObject(enemy, this.player, this.enemyMaxSpeed);
         });
 
@@ -388,12 +468,17 @@ export default class MainScene extends Phaser.Scene {
         const magnetRange = 100;
         const baseMagnetSpeed = 100;
 
-        this.coins.getChildren().forEach(obj => {
+        this.coins.getChildren().forEach((obj) => {
             const coin = obj as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
-            const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, coin.x, coin.y);
+            const distance = Phaser.Math.Distance.Between(
+                this.player.x,
+                this.player.y,
+                coin.x,
+                coin.y
+            );
             if (distance < magnetRange) {
-                const proximity = 1 - (distance / magnetRange);
-                const speed = baseMagnetSpeed + (proximity * proximity * 600);
+                const proximity = 1 - distance / magnetRange;
+                const speed = baseMagnetSpeed + proximity * proximity * 600;
                 this.physics.moveToObject(coin, this.player, speed);
             } else {
                 if (coin.body.velocity.x !== 0 || coin.body.velocity.y !== 0) {
@@ -405,7 +490,7 @@ export default class MainScene extends Phaser.Scene {
         const px = this.player.x;
         const py = this.player.y;
         const bd2 = this.bulletMaxDistance * this.bulletMaxDistance;
-        this.bullets.getChildren().forEach(obj => {
+        this.bullets.getChildren().forEach((obj) => {
             const bullet = obj as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
             if (!bullet.active) return;
             const dx = bullet.x - px;
@@ -468,14 +553,24 @@ export default class MainScene extends Phaser.Scene {
         this.radarGraphics.strokeCircle(this.radarX, this.radarY, this.radarRadius * 0.25);
 
         this.radarGraphics.lineStyle(1, 0x666666, 0.3);
-        this.radarGraphics.lineBetween(this.radarX - this.radarRadius, this.radarY, this.radarX + this.radarRadius, this.radarY);
-        this.radarGraphics.lineBetween(this.radarX, this.radarY - this.radarRadius, this.radarX, this.radarY + this.radarRadius);
+        this.radarGraphics.lineBetween(
+            this.radarX - this.radarRadius,
+            this.radarY,
+            this.radarX + this.radarRadius,
+            this.radarY
+        );
+        this.radarGraphics.lineBetween(
+            this.radarX,
+            this.radarY - this.radarRadius,
+            this.radarX,
+            this.radarY + this.radarRadius
+        );
 
         const px = this.player.x;
         const py = this.player.y;
         const scale = this.radarRadius / this.radarRange;
 
-        (this.enemies.getChildren() as Phaser.GameObjects.Sprite[]).forEach(enemy => {
+        (this.enemies.getChildren() as Phaser.GameObjects.Sprite[]).forEach((enemy) => {
             const dx = enemy.x - px;
             const dy = enemy.y - py;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -487,7 +582,7 @@ export default class MainScene extends Phaser.Scene {
             }
         });
 
-        (this.coins.getChildren() as Phaser.GameObjects.Sprite[]).forEach(coin => {
+        (this.coins.getChildren() as Phaser.GameObjects.Sprite[]).forEach((coin) => {
             const dx = coin.x - px;
             const dy = coin.y - py;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -521,7 +616,10 @@ export default class MainScene extends Phaser.Scene {
         const spawnX = this.player.x + Math.cos(this.player.rotation) * offset;
         const spawnY = this.player.y + Math.sin(this.player.rotation) * offset;
 
-        const bullet = this.bullets.get(spawnX, spawnY) as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody | null;
+        const bullet = this.bullets.get(
+            spawnX,
+            spawnY
+        ) as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody | null;
 
         if (bullet) {
             bullet.setActive(true);
@@ -555,7 +653,11 @@ export default class MainScene extends Phaser.Scene {
         const x = this.player.x + Math.cos(angle) * dist;
         const y = this.player.y + Math.sin(angle) * dist;
 
-        const enemy = this.enemies.create(x, y, 'enemy') as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+        const enemy = this.enemies.create(
+            x,
+            y,
+            'enemy'
+        ) as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
         enemy.setCollideWorldBounds(false);
     }
 
@@ -563,14 +665,20 @@ export default class MainScene extends Phaser.Scene {
         this.coins.create(x, y, 'coin');
     }
 
-    private collectCoin(_player: Phaser.GameObjects.GameObject, coin: Phaser.GameObjects.GameObject): void {
+    private collectCoin(
+        _player: Phaser.GameObjects.GameObject,
+        coin: Phaser.GameObjects.GameObject
+    ): void {
         coin.destroy();
         this.coinCount += 1;
         this.coinText.setText('Coins: ' + this.coinCount);
         this.sound.play('pickupCoin');
     }
 
-    private hitEnemy(bullet: Phaser.GameObjects.GameObject, enemy: Phaser.GameObjects.GameObject): void {
+    private hitEnemy(
+        bullet: Phaser.GameObjects.GameObject,
+        enemy: Phaser.GameObjects.GameObject
+    ): void {
         const b = bullet as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
         const e = enemy as Phaser.GameObjects.Sprite;
         b.setActive(false);
@@ -587,7 +695,10 @@ export default class MainScene extends Phaser.Scene {
         this.sound.play('enemyDestroyed');
     }
 
-    private hitPlayer(_player: Phaser.GameObjects.GameObject, enemy: Phaser.GameObjects.GameObject): void {
+    private hitPlayer(
+        _player: Phaser.GameObjects.GameObject,
+        enemy: Phaser.GameObjects.GameObject
+    ): void {
         const e = enemy as Phaser.GameObjects.Sprite;
         this.explosionEmitter.explode(15, e.x, e.y);
         e.destroy();
