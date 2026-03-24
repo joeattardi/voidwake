@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import MainScene from './MainScene';
 
-export function createGameConfig(parent) {
+export function createGameConfig(parent: HTMLElement): Phaser.Types.Core.GameConfig {
   return {
     type: Phaser.AUTO,
     parent,
@@ -13,7 +13,7 @@ export function createGameConfig(parent) {
     physics: {
       default: 'arcade',
       arcade: {
-        gravity: { y: 0 },
+        gravity: { x: 0, y: 0 },
         debug: false,
       },
     },

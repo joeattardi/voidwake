@@ -3,8 +3,8 @@ import Phaser from 'phaser';
 import { createGameConfig } from '../game/config';
 
 export default function PhaserGame() {
-  const containerRef = useRef(null);
-  const gameRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const gameRef = useRef<Phaser.Game | null>(null);
   const [showGameOver, setShowGameOver] = useState(false);
 
   useEffect(() => {
@@ -67,8 +67,8 @@ export default function PhaserGame() {
               border: '2px solid #888',
               borderRadius: '8px',
             }}
-            onMouseEnter={(e) => (e.target.style.background = '#666')}
-            onMouseLeave={(e) => (e.target.style.background = '#444')}
+            onMouseEnter={(e) => ((e.target as HTMLButtonElement).style.background = '#666')}
+            onMouseLeave={(e) => ((e.target as HTMLButtonElement).style.background = '#444')}
           >
             Try Again
           </button>

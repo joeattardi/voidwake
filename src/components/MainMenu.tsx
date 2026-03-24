@@ -1,8 +1,12 @@
 import { useRef, useEffect } from 'react';
 import './MainMenu.css';
 
-export default function MainMenu({ onStartGame }) {
-  const buttonRef = useRef(null);
+interface MainMenuProps {
+  onStartGame: () => void;
+}
+
+export default function MainMenu({ onStartGame }: MainMenuProps) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     buttonRef.current?.focus();

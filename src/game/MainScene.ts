@@ -1,43 +1,60 @@
 import Phaser from 'phaser';
 
-/**
- * Void Wake - Main Game Scene
- * A Vampire Survivors-style space shooter in Phaser 3.
- */
+interface StarEntry {
+    img: Phaser.GameObjects.Image;
+    baseAlpha: number;
+    twinkle: number;
+    twinklePhase: number;
+}
+
+interface StarfieldLayer {
+    stars: StarEntry[];
+    scrollFactor: number;
+}
+
 export default class MainScene extends Phaser.Scene {
+    private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+    private enemies!: Phaser.Physics.Arcade.Group;
+    private bullets!: Phaser.Physics.Arcade.Group;
+    private coins!: Phaser.Physics.Arcade.Group;
+    private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+    private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
+    private qeKeys!: Record<string, Phaser.Input.Keyboard.Key>;
+    private score = 0;
+    private health = 100;
+    private scoreText!: Phaser.GameObjects.Text;
+    private healthText!: Phaser.GameObjects.Text;
+    private coinText!: Phaser.GameObjects.Text;
+    private coinCount = 0;
+    private lastFired = 0;
+    private readonly fireRate = 500;
+    private readonly spawnRate = 1000;
+    private starfieldLayers: StarfieldLayer[] | null = null;
+    private readonly starfieldAmbientVx = 6;
+    private readonly starfieldAmbientVy = -2.5;
+    private readonly worldRecenterThreshold = 12000;
+    private readonly maxEnemies = 220;
+    private readonly enemyCullDistance = 3400;
+    private readonly bulletMaxDistance = 1600;
+    private readonly playerMaxSpeed = 220;
+    private readonly enemyMaxSpeed = 200;
+    private readonly radarRange = 2500;
+    private readonly radarRadius = 40;
+    private radarGraphics!: Phaser.GameObjects.Graphics;
+    private readonly radarX = 750;
+    private readonly radarY = 550;
+    private explosionEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+    private thrusterHaloEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+    private thrusterEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+    private rcsPortEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+    private rcsStarboardEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+    private thrusterRumble!: Phaser.Sound.BaseSound;
+
     constructor() {
         super('MainScene');
-        this.player = null;
-        this.enemies = null;
-        this.bullets = null;
-        this.coins = null;
-        this.cursors = null;
-        this.score = 0;
-        this.health = 100;
-        this.scoreText = null;
-        this.healthText = null;
-        this.coinText = null;
-        this.coinCount = 0;
-        this.lastFired = 0;
-        this.fireRate = 500;
-        this.spawnRate = 1000;
-        this.starfieldLayers = null;
-        this.starfieldAmbientVx = 6;
-        this.starfieldAmbientVy = -2.5;
-        this.worldRecenterThreshold = 12000;
-        this.maxEnemies = 220;
-        this.enemyCullDistance = 3400;
-        this.bulletMaxDistance = 1600;
-        this.playerMaxSpeed = 220;
-        this.enemyMaxSpeed = 200;
-        this.radarRange = 2500;
-        this.radarRadius = 40;
-        this.radarGraphics = null;
-        this.radarX = 750;
-        this.radarY = 550;
     }
 
-    preload() {
+    preload(): void {
         this.load.image('player', 'assets/playerShip.png');
         this.load.image('enemy', 'assets/enemyShip.png');
         this.load.audio('playerDamage', 'assets/playerDamage.wav');
@@ -48,7 +65,7 @@ export default class MainScene extends Phaser.Scene {
         this.load.audio('backgroundMusic', 'assets/Nebula_Stalker.mp3');
     }
 
-    create() {
+    create(): void {
         this.score = 0;
         this.health = 100;
         this.coinCount = 0;
@@ -77,18 +94,18 @@ export default class MainScene extends Phaser.Scene {
         this.enemies = this.physics.add.group();
         this.coins = this.physics.add.group();
 
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.wasd = this.input.keyboard.addKeys('W,A,S,D');
-        this.qeKeys = this.input.keyboard.addKeys('Q,E');
+        this.cursors = this.input.keyboard!.createCursorKeys();
+        this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>;
+        this.qeKeys = this.input.keyboard!.addKeys('Q,E') as Record<string, Phaser.Input.Keyboard.Key>;
 
-        this.scoreText = this.add.text(16, 520, 'Score: 0', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0).setDepth(6);
-        this.healthText = this.add.text(16, 540, 'Health: 100', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0).setDepth(6);
-        this.coinText = this.add.text(16, 560, 'Coins: 0', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0).setDepth(6);
+        this.scoreText = this.add.text(16, 520, 'Score: 0', { fontSize: '24px', color: '#fff' }).setScrollFactor(0).setDepth(6);
+        this.healthText = this.add.text(16, 540, 'Health: 100', { fontSize: '24px', color: '#fff' }).setScrollFactor(0).setDepth(6);
+        this.coinText = this.add.text(16, 560, 'Coins: 0', { fontSize: '24px', color: '#fff' }).setScrollFactor(0).setDepth(6);
 
-        this.panelGraphics = this.add.graphics().setScrollFactor(0);
-        this.panelGraphics.fillStyle(0x000000, 1.0);
-        this.panelGraphics.fillRect(0, 500, 800, 150);
-        this.panelGraphics.setDepth(5);
+        const panelGraphics = this.add.graphics().setScrollFactor(0);
+        panelGraphics.fillStyle(0x000000, 1.0);
+        panelGraphics.fillRect(0, 500, 800, 150);
+        panelGraphics.setDepth(5);
 
         this.radarGraphics = this.add.graphics().setScrollFactor(0);
         this.radarGraphics.setDepth(10);
@@ -133,7 +150,7 @@ export default class MainScene extends Phaser.Scene {
         });
         this.thrusterEmitter.setDepth(-1);
 
-        const makeRcsEmitter = () =>
+        const makeRcsEmitter = (): Phaser.GameObjects.Particles.ParticleEmitter =>
             this.add.particles(0, 0, 'rcsPuff', {
                 lifespan: { min: 95, max: 200 },
                 speed: { min: 48, max: 145 },
@@ -158,27 +175,27 @@ export default class MainScene extends Phaser.Scene {
             loop: true
         });
 
-        this.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy, null, this);
-        this.physics.add.overlap(this.player, this.enemies, this.hitPlayer, null, this);
-        this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
+        this.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
+        this.physics.add.overlap(this.player, this.enemies, this.hitPlayer as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
+        this.physics.add.overlap(this.player, this.coins, this.collectCoin as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
 
         this.thrusterRumble = this.sound.add('thrusterRumble', {
             loop: true,
             volume: 0.82
         });
 
-        const resumeAudio = () => {
-            const ctx = this.sound.context;
+        const resumeAudio = (): void => {
+            const ctx = (this.sound as Phaser.Sound.WebAudioSoundManager).context;
             if (ctx && ctx.state === 'suspended') {
                 ctx.resume();
             }
         };
-        this.input.keyboard.once('keydown', resumeAudio);
+        this.input.keyboard!.once('keydown', resumeAudio);
         this.input.once('pointerdown', resumeAudio);
     }
 
-    createTextures() {
-        let graphics = this.make.graphics({ x: 0, y: 0, add: false });
+    private createTextures(): void {
+        const graphics = this.make.graphics({ x: 0, y: 0 }, false);
 
         graphics.clear();
         graphics.fillStyle(0xffffff, 1);
@@ -246,7 +263,7 @@ export default class MainScene extends Phaser.Scene {
         graphics.generateTexture('cosmicDust', 4, 4);
     }
 
-    setupStarfield() {
+    private setupStarfield(): void {
         const W = this.scale.width;
         const H = this.scale.height;
 
@@ -257,7 +274,7 @@ export default class MainScene extends Phaser.Scene {
         sky.setScrollFactor(0);
 
         const nebula = this.add.graphics();
-        const mist = (cx, cy, r, color, a) => {
+        const mist = (cx: number, cy: number, r: number, color: number, a: number): void => {
             nebula.fillStyle(color, a);
             nebula.fillCircle(cx, cy, r);
         };
@@ -284,7 +301,7 @@ export default class MainScene extends Phaser.Scene {
         const spreadY = H * 6;
 
         this.starfieldLayers = layerDefs.map((def) => {
-            const stars = [];
+            const stars: StarEntry[] = [];
             for (let i = 0; i < def.count; i++) {
                 const img = this.add.image(
                     Phaser.Math.FloatBetween(-spreadX * 0.5, spreadX * 0.5),
@@ -314,7 +331,7 @@ export default class MainScene extends Phaser.Scene {
         });
     }
 
-    updateStarfield(time, delta) {
+    private updateStarfield(time: number, delta: number): void {
         if (!this.starfieldLayers) return;
 
         const dt = delta / 1000;
@@ -354,7 +371,7 @@ export default class MainScene extends Phaser.Scene {
         });
     }
 
-    update(time, delta) {
+    update(time: number, delta: number): void {
         this.updateStarfield(time, delta);
         if (this.health <= 0) return;
 
@@ -376,7 +393,8 @@ export default class MainScene extends Phaser.Scene {
         const magnetRange = 100;
         const baseMagnetSpeed = 100;
 
-        this.coins.getChildren().forEach(coin => {
+        this.coins.getChildren().forEach(obj => {
+            const coin = obj as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
             const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, coin.x, coin.y);
             if (distance < magnetRange) {
                 const proximity = 1 - (distance / magnetRange);
@@ -392,7 +410,8 @@ export default class MainScene extends Phaser.Scene {
         const px = this.player.x;
         const py = this.player.y;
         const bd2 = this.bulletMaxDistance * this.bulletMaxDistance;
-        this.bullets.getChildren().forEach(bullet => {
+        this.bullets.getChildren().forEach(obj => {
+            const bullet = obj as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
             if (!bullet.active) return;
             const dx = bullet.x - px;
             const dy = bullet.y - py;
@@ -406,7 +425,7 @@ export default class MainScene extends Phaser.Scene {
         this.updateRadar();
     }
 
-    maybeRecenterWorld() {
+    private maybeRecenterWorld(): void {
         const t = this.worldRecenterThreshold;
         if (Math.abs(this.player.x) < t && Math.abs(this.player.y) < t) {
             return;
@@ -415,14 +434,17 @@ export default class MainScene extends Phaser.Scene {
         const oy = this.player.y;
         this.player.setPosition(0, 0);
         this.enemies.getChildren().forEach((e) => {
-            e.setPosition(e.x - ox, e.y - oy);
+            const sprite = e as Phaser.GameObjects.Sprite;
+            sprite.setPosition(sprite.x - ox, sprite.y - oy);
         });
         this.coins.getChildren().forEach((c) => {
-            c.setPosition(c.x - ox, c.y - oy);
+            const sprite = c as Phaser.GameObjects.Sprite;
+            sprite.setPosition(sprite.x - ox, sprite.y - oy);
         });
         this.bullets.getChildren().forEach((b) => {
-            if (!b.active) return;
-            b.setPosition(b.x - ox, b.y - oy);
+            const sprite = b as Phaser.GameObjects.Sprite;
+            if (!sprite.active) return;
+            sprite.setPosition(sprite.x - ox, sprite.y - oy);
         });
         if (this.starfieldLayers) {
             this.starfieldLayers.forEach((layer) => {
@@ -435,7 +457,7 @@ export default class MainScene extends Phaser.Scene {
         }
     }
 
-    updateRadar() {
+    private updateRadar(): void {
         if (!this.radarGraphics) return;
 
         this.radarGraphics.clear();
@@ -458,27 +480,27 @@ export default class MainScene extends Phaser.Scene {
         const py = this.player.y;
         const scale = this.radarRadius / this.radarRange;
 
-        this.enemies.getChildren().forEach(enemy => {
+        (this.enemies.getChildren() as Phaser.GameObjects.Sprite[]).forEach(enemy => {
             const dx = enemy.x - px;
             const dy = enemy.y - py;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist <= this.radarRange) {
-                const radarX = this.radarX + dx * scale;
-                const radarY = this.radarY + dy * scale;
+                const dotX = this.radarX + dx * scale;
+                const dotY = this.radarY + dy * scale;
                 this.radarGraphics.fillStyle(0xff0000, 0.8);
-                this.radarGraphics.fillCircle(radarX, radarY, 3);
+                this.radarGraphics.fillCircle(dotX, dotY, 3);
             }
         });
 
-        this.coins.getChildren().forEach(coin => {
+        (this.coins.getChildren() as Phaser.GameObjects.Sprite[]).forEach(coin => {
             const dx = coin.x - px;
             const dy = coin.y - py;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist <= this.radarRange) {
-                const radarX = this.radarX + dx * scale;
-                const radarY = this.radarY + dy * scale;
+                const dotX = this.radarX + dx * scale;
+                const dotY = this.radarY + dy * scale;
                 this.radarGraphics.fillStyle(0xffff00, 0.8);
-                this.radarGraphics.fillCircle(radarX, radarY, 2);
+                this.radarGraphics.fillCircle(dotX, dotY, 2);
             }
         });
 
@@ -486,11 +508,11 @@ export default class MainScene extends Phaser.Scene {
         this.radarGraphics.fillCircle(this.radarX, this.radarY, 2);
     }
 
-    cullDistantEnemies() {
+    private cullDistantEnemies(): void {
         const px = this.player.x;
         const py = this.player.y;
         const d2 = this.enemyCullDistance * this.enemyCullDistance;
-        this.enemies.getChildren().forEach((enemy) => {
+        (this.enemies.getChildren() as Phaser.GameObjects.Sprite[]).forEach((enemy) => {
             const dx = enemy.x - px;
             const dy = enemy.y - py;
             if (dx * dx + dy * dy > d2) {
@@ -499,7 +521,7 @@ export default class MainScene extends Phaser.Scene {
         });
     }
 
-    clampPlayerSpeed() {
+    private clampPlayerSpeed(): void {
         if (!this.player || !this.player.body) return;
         const body = this.player.body;
         const vx = body.velocity.x;
@@ -512,7 +534,7 @@ export default class MainScene extends Phaser.Scene {
         body.setVelocity(vx * inv, vy * inv);
     }
 
-    handlePlayerMovement() {
+    private handlePlayerMovement(): void {
         const thrust = 300;
         const r = this.player.rotation;
 
@@ -553,13 +575,13 @@ export default class MainScene extends Phaser.Scene {
         this.updateManeuverThrusterVisual(rotatingLeft, rotatingRight);
     }
 
-    updateThrusterSound(ax, ay) {
+    private updateThrusterSound(ax: number, ay: number): void {
         const thrusting = ax * ax + ay * ay >= 1;
         if (!this.thrusterRumble) {
             return;
         }
         if (thrusting) {
-            const ctx = this.sound.context;
+            const ctx = (this.sound as Phaser.Sound.WebAudioSoundManager).context;
             if (ctx && ctx.state === 'suspended') {
                 ctx.resume();
             }
@@ -571,7 +593,7 @@ export default class MainScene extends Phaser.Scene {
         }
     }
 
-    updateThrusterVisual(ax, ay) {
+    private updateThrusterVisual(ax: number, ay: number): void {
         const magSq = ax * ax + ay * ay;
         if (magSq < 1) {
             this.thrusterEmitter.emitting = false;
@@ -589,15 +611,15 @@ export default class MainScene extends Phaser.Scene {
         const deg = Phaser.Math.RadToDeg(Math.atan2(-ay, -ax));
 
         this.thrusterHaloEmitter.setPosition(px, py);
-        this.thrusterHaloEmitter.ops.angle.loadConfig({ angle: { min: deg - 38, max: deg + 38 } });
+        (this.thrusterHaloEmitter.ops.angle as { loadConfig(cfg: object): void }).loadConfig({ angle: { min: deg - 38, max: deg + 38 } });
         this.thrusterHaloEmitter.emitting = true;
 
         this.thrusterEmitter.setPosition(px, py);
-        this.thrusterEmitter.ops.angle.loadConfig({ angle: { min: deg - 26, max: deg + 26 } });
+        (this.thrusterEmitter.ops.angle as { loadConfig(cfg: object): void }).loadConfig({ angle: { min: deg - 26, max: deg + 26 } });
         this.thrusterEmitter.emitting = true;
     }
 
-    updateManeuverThrusterVisual(rotatingLeft, rotatingRight) {
+    private updateManeuverThrusterVisual(rotatingLeft: boolean, rotatingRight: boolean): void {
         const r = this.player.rotation;
         const d = 13;
 
@@ -606,7 +628,7 @@ export default class MainScene extends Phaser.Scene {
             const sy = Math.cos(r);
             const deg = Phaser.Math.RadToDeg(Math.atan2(sy, sx));
             this.rcsStarboardEmitter.setPosition(this.player.x + sx * d, this.player.y + sy * d);
-            this.rcsStarboardEmitter.ops.angle.loadConfig({ angle: { min: deg - 22, max: deg + 22 } });
+            (this.rcsStarboardEmitter.ops.angle as { loadConfig(cfg: object): void }).loadConfig({ angle: { min: deg - 22, max: deg + 22 } });
             this.rcsStarboardEmitter.emitting = true;
             this.rcsPortEmitter.emitting = false;
         } else if (rotatingRight) {
@@ -614,7 +636,7 @@ export default class MainScene extends Phaser.Scene {
             const sy = -Math.cos(r);
             const deg = Phaser.Math.RadToDeg(Math.atan2(sy, sx));
             this.rcsPortEmitter.setPosition(this.player.x + sx * d, this.player.y + sy * d);
-            this.rcsPortEmitter.ops.angle.loadConfig({ angle: { min: deg - 22, max: deg + 22 } });
+            (this.rcsPortEmitter.ops.angle as { loadConfig(cfg: object): void }).loadConfig({ angle: { min: deg - 22, max: deg + 22 } });
             this.rcsPortEmitter.emitting = true;
             this.rcsStarboardEmitter.emitting = false;
         } else {
@@ -623,12 +645,12 @@ export default class MainScene extends Phaser.Scene {
         }
     }
 
-    fireBullet() {
+    private fireBullet(): void {
         const offset = 20;
         const spawnX = this.player.x + Math.cos(this.player.rotation) * offset;
         const spawnY = this.player.y + Math.sin(this.player.rotation) * offset;
 
-        let bullet = this.bullets.get(spawnX, spawnY);
+        const bullet = this.bullets.get(spawnX, spawnY) as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody | null;
 
         if (bullet) {
             bullet.setActive(true);
@@ -642,7 +664,7 @@ export default class MainScene extends Phaser.Scene {
         }
     }
 
-    spawnEnemy() {
+    private spawnEnemy(): void {
         if (this.health <= 0 || !this.player) {
             return;
         }
@@ -662,29 +684,31 @@ export default class MainScene extends Phaser.Scene {
         const x = this.player.x + Math.cos(angle) * dist;
         const y = this.player.y + Math.sin(angle) * dist;
 
-        const enemy = this.enemies.create(x, y, 'enemy');
+        const enemy = this.enemies.create(x, y, 'enemy') as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
         enemy.setCollideWorldBounds(false);
     }
 
-    spawnCoin(x, y) {
+    private spawnCoin(x: number, y: number): void {
         this.coins.create(x, y, 'coin');
     }
 
-    collectCoin(player, coin) {
+    private collectCoin(_player: Phaser.GameObjects.GameObject, coin: Phaser.GameObjects.GameObject): void {
         coin.destroy();
         this.coinCount += 1;
         this.coinText.setText('Coins: ' + this.coinCount);
         this.sound.play('pickupCoin');
     }
 
-    hitEnemy(bullet, enemy) {
-        bullet.setActive(false);
-        bullet.setVisible(false);
-        bullet.body.setVelocity(0, 0);
+    private hitEnemy(bullet: Phaser.GameObjects.GameObject, enemy: Phaser.GameObjects.GameObject): void {
+        const b = bullet as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+        const e = enemy as Phaser.GameObjects.Sprite;
+        b.setActive(false);
+        b.setVisible(false);
+        b.body.setVelocity(0, 0);
 
-        this.explosionEmitter.explode(15, enemy.x, enemy.y);
-        this.spawnCoin(enemy.x, enemy.y);
-        enemy.destroy();
+        this.explosionEmitter.explode(15, e.x, e.y);
+        this.spawnCoin(e.x, e.y);
+        e.destroy();
 
         this.score += 10;
         this.scoreText.setText('Score: ' + this.score);
@@ -692,9 +716,10 @@ export default class MainScene extends Phaser.Scene {
         this.sound.play('enemyDestroyed');
     }
 
-    hitPlayer(player, enemy) {
-        this.explosionEmitter.explode(15, enemy.x, enemy.y);
-        enemy.destroy();
+    private hitPlayer(_player: Phaser.GameObjects.GameObject, enemy: Phaser.GameObjects.GameObject): void {
+        const e = enemy as Phaser.GameObjects.Sprite;
+        this.explosionEmitter.explode(15, e.x, e.y);
+        e.destroy();
 
         this.sound.play('playerDamage');
 
