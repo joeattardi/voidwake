@@ -38,7 +38,7 @@ export class CombatResolver {
         this.score += 10;
         this.scene.game.events.emit('score-changed', this.score);
         this.scene.sound.play('enemyDestroyed');
-        this.scene.cameras.main.flash(80, 200, 200, 200, true);
+        this.scene.cameras.main.flash(80, 200, 200, 200);
     }
 
     hitPlayer(
@@ -54,7 +54,7 @@ export class CombatResolver {
         this.scene.cameras.main.flash(200, 255, 0, 0);
         this.scene.cameras.main.shake(200, 0.01);
 
-        this.player.health -= 10;
+        // this.player.health -= 10;
         this.scene.game.events.emit('health-changed', this.player.health);
 
         if (this.player.health <= 0) {
