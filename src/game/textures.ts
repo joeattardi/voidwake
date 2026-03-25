@@ -9,6 +9,15 @@ export function createTextures(scene: Phaser.Scene): void {
     graphics.generateTexture('bullet', 8, 8);
 
     graphics.clear();
+    graphics.fillStyle(0x66bbff, 0.12);
+    graphics.fillCircle(12, 12, 12);
+    graphics.fillStyle(0x88ddff, 0.3);
+    graphics.fillCircle(12, 12, 7);
+    graphics.fillStyle(0xffffff, 0.6);
+    graphics.fillCircle(12, 12, 3);
+    graphics.generateTexture('bulletGlow', 24, 24);
+
+    graphics.clear();
     graphics.fillStyle(0xffff00, 1);
     graphics.fillCircle(4, 4, 4);
     graphics.generateTexture('coin', 8, 8);
