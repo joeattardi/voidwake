@@ -91,7 +91,7 @@ export default function PhaserGame() {
                     </div>
                 )}
             </div>
-            <HudOverlay score={score} health={health} coins={coins} />
+            <HudOverlay score={score} health={health} coins={coins} gameOver={showGameOver} />
         </div>
     );
 }

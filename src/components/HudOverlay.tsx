@@ -4,9 +4,10 @@ interface HudOverlayProps {
     score: number;
     health: number;
     coins: number;
+    gameOver: boolean;
 }
 
-export default function HudOverlay({ score, health, coins }: HudOverlayProps) {
+export default function HudOverlay({ score, health, coins, gameOver }: HudOverlayProps) {
     const healthPercent = Math.max(0, Math.min(100, health));
 
     return (
@@ -23,6 +24,9 @@ export default function HudOverlay({ score, health, coins }: HudOverlayProps) {
                         className="health-bar-glow"
                         style={{ width: `${healthPercent}%` }}
                     />
+                    {healthPercent < 30 && !gameOver && (
+                        <span className="critical-alert">CRITICAL</span>
+                    )}
                 </div>
             </div>
             <span className="hud-item">COINS {coins}</span>

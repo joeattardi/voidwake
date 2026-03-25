@@ -36,7 +36,6 @@
     background: rgba(255, 34, 68, 0.08);
     border: 1px solid rgba(255, 34, 68, 0.3);
     border-radius: 3px;
-    overflow: hidden;
 }
 
 .health-bar-fill {
@@ -59,6 +58,27 @@
     filter: blur(6px);
     transition: width 0.3s ease-out;
     pointer-events: none;
+}
+
+.critical-alert {
+    font-family: 'Orbitron Variable', sans-serif;
+    font-size: 12px;
+    color: #ff2244;
+    text-shadow:
+        0 0 4px #ff2244,
+        0 0 12px #ff0044;
+    animation: critical-flash 0.5s ease-in-out infinite;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 4px;
+    white-space: nowrap;
+}
+
+@keyframes critical-flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
 }
 
 .health-bar-track::after {
