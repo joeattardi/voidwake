@@ -8,13 +8,12 @@ body {
     background-color: #000;
     overflow: hidden;
     font-family: "Orbitron Variable", sans-serif;
-    /* font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
 }
 
 #game-container {
     position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
 }

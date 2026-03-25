@@ -1,13 +1,8 @@
 .hud-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
     display: flex;
     gap: 32px;
     padding: 12px 24px;
     background: rgba(0, 0, 0, 0.85);
-    z-index: 5;
     pointer-events: none;
 }
 
@@ -20,4 +15,62 @@
         0 0 8px #0ff,
         0 0 16px #0088ff,
         0 0 32px #0088ff;
+}
+
+.health-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.health-label {
+    font-family: 'Orbitron Variable', sans-serif;
+    font-size: 18px;
+    color: #0ff;
+}
+
+.health-bar-track {
+    position: relative;
+    width: 140px;
+    height: 16px;
+    background: rgba(255, 34, 68, 0.08);
+    border: 1px solid rgba(255, 34, 68, 0.3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.health-bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #ff2244, #ff4466, #ff2244);
+    border-radius: 2px;
+    transition: width 0.3s ease-out;
+}
+
+.health-bar-glow {
+    position: absolute;
+    top: -2px;
+    left: 0;
+    height: calc(100% + 4px);
+    border-radius: 3px;
+    background: linear-gradient(90deg, rgba(255, 34, 68, 0.4), rgba(255, 68, 102, 0.6), rgba(255, 34, 68, 0.4));
+    filter: blur(6px);
+    transition: width 0.3s ease-out;
+    pointer-events: none;
+}
+
+.health-bar-track::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-shadow:
+        0 0 8px rgba(255, 34, 68, 0.3),
+        0 0 16px rgba(255, 0, 68, 0.15);
+    border-radius: 3px;
+    pointer-events: none;
 }

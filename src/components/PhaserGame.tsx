@@ -48,48 +48,50 @@ export default function PhaserGame() {
     };
 
     return (
-        <div ref={containerRef} id="game-container">
-            <HudOverlay score={score} health={health} coins={coins} />
-            {showGameOver && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 10,
-                        gap: '24px',
-                        background: 'rgba(0, 0, 0, 0.5)'
-                    }}
-                >
-                    <div style={{ fontSize: '64px', color: '#fff', fontWeight: 'bold' }}>
-                        GAME OVER
-                    </div>
-                    <button
-                        onClick={handleTryAgain}
+        <div id="game-wrapper">
+            <div ref={containerRef} id="game-container">
+                {showGameOver && (
+                    <div
                         style={{
-                            fontSize: '28px',
-                            padding: '10px 32px',
-                            cursor: 'pointer',
-                            background: '#444',
-                            color: '#fff',
-                            border: '2px solid #888',
-                            borderRadius: '8px',
-                            fontFamily: 'Orbitron Variable, sans-serif',
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 10,
+                            gap: '24px',
+                            background: 'rgba(0, 0, 0, 0.5)'
                         }}
-                        onMouseEnter={(e) =>
-                            ((e.target as HTMLButtonElement).style.background = '#666')
-                        }
-                        onMouseLeave={(e) =>
-                            ((e.target as HTMLButtonElement).style.background = '#444')
-                        }
                     >
-                        Try Again
-                    </button>
-                </div>
-            )}
+                        <div style={{ fontSize: '64px', color: '#fff', fontWeight: 'bold' }}>
+                            GAME OVER
+                        </div>
+                        <button
+                            onClick={handleTryAgain}
+                            style={{
+                                fontSize: '28px',
+                                padding: '10px 32px',
+                                cursor: 'pointer',
+                                background: '#444',
+                                color: '#fff',
+                                border: '2px solid #888',
+                                borderRadius: '8px',
+                                fontFamily: 'Orbitron Variable, sans-serif',
+                            }}
+                            onMouseEnter={(e) =>
+                                ((e.target as HTMLButtonElement).style.background = '#666')
+                            }
+                            onMouseLeave={(e) =>
+                                ((e.target as HTMLButtonElement).style.background = '#444')
+                            }
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                )}
+            </div>
+            <HudOverlay score={score} health={health} coins={coins} />
         </div>
     );
 }
