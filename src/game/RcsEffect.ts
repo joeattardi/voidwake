@@ -30,10 +30,17 @@ function createRcsEmitter(scene: Phaser.Scene): Phaser.GameObjects.Particles.Par
 export class RcsEffect {
     private portEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     private starboardEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
+    private rumble: Phaser.Sound.BaseSound;
+    private scene: Phaser.Scene;
 
     constructor(scene: Phaser.Scene) {
+        this.scene = scene;
         this.portEmitter = createRcsEmitter(scene);
         this.starboardEmitter = createRcsEmitter(scene);
+        this.rumble = scene.sound.add('thrusterRumble', {
+            loop: true,
+            volume: 1.2
+        });
     }
 
     update(
@@ -66,10 +73,34 @@ export class RcsEffect {
         } else {
             this.portEmitter.emitting = false;
         }
+
+        if (isRotatingLeft || isRotatingRight) {
+            this.startSound();
+        } else {
+            this.stopSound();
+        }
     }
 
     stop(): void {
         this.portEmitter.emitting = false;
         this.starboardEmitter.emitting = false;
+        this.stopSound();
+    }
+
+    private startSound(): void {
+        if (!this.rumble) return;
+        const ctx = (this.scene.sound as Phaser.Sound.WebAudioSoundManager).context;
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume();
+        }
+        if (!this.rumble.isPlaying) {
+            this.rumble.play();
+        }
+    }
+
+    private stopSound(): void {
+        if (this.rumble?.isPlaying) {
+            this.rumble.stop();
+        }
     }
 }
