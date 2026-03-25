@@ -33,6 +33,7 @@ export default class MainScene extends Phaser.Scene {
         this.load.audio('enemyDestroyed', 'assets/enemyDestroyed.wav');
         this.load.audio('pickupCoin', 'assets/pickupCoin.wav');
         this.load.audio('thrusterRumble', 'assets/thrusterRumble.wav');
+        this.load.audio('laserShoot', 'assets/laserShoot.wav');
         this.load.audio('backgroundMusic', 'assets/Nebula_Stalker.mp3');
     }
 

@@ -3,16 +3,18 @@ import { Player } from './Player';
 
 export class Weapons {
     readonly bullets: Phaser.Physics.Arcade.Group;
-    private lastFired = 0;
+    private lastFired = Infinity;
     private readonly fireRate: number;
+    private readonly fireDelay: number;
     private readonly maxDistance: number;
 
     constructor(
         private scene: Phaser.Scene,
         private player: Player,
-        { fireRate = 500, maxDistance = 1600 } = {}
+        { fireRate = 500, fireDelay = 1000, maxDistance = 1600 } = {}
     ) {
         this.fireRate = fireRate;
+        this.fireDelay = fireDelay;
         this.maxDistance = maxDistance;
 
         this.bullets = this.scene.physics.add.group({
@@ -22,6 +24,9 @@ export class Weapons {
     }
 
     update(time: number): void {
+        if (this.lastFired === Infinity) {
+            this.lastFired = time + this.fireDelay;
+        }
         if (time > this.lastFired) {
             this.fire();
             this.lastFired = time + this.fireRate;
@@ -30,7 +35,7 @@ export class Weapons {
     }
 
     reset(): void {
-        this.lastFired = 0;
+        this.lastFired = Infinity;
     }
 
     private fire(): void {
@@ -52,6 +57,7 @@ export class Weapons {
             const vy = Math.sin(this.player.rotation) * bulletSpeed;
 
             bullet.body.setVelocity(vx, vy);
+            this.scene.sound.play('laserShoot', { volume: 0.25});
         }
     }
 
