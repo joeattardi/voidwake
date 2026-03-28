@@ -1,0 +1,18 @@
+.pause-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.pause-text {
+    font-size: 64px;
+    color: #0ff;
+    font-weight: bold;
+    font-family: "Orbitron Variable", sans-serif;
+    text-shadow: 0 0 16px #0ff, 0 0 32px #0088ff;
+    text-transform: uppercase;
+}
