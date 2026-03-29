@@ -4,6 +4,7 @@ import { createGameConfig } from '../game/config';
 import HudOverlay from './HudOverlay';
 import PauseView from './PauseView';
 import GameContext from './GameContext';
+import GameOverView from './GameOverView';
 
 export default function PhaserGame() {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -48,7 +49,7 @@ export default function PhaserGame() {
         };
     }, []);
 
-    const handleTryAgain = () => {
+    const resetGame = () => {
         const game = gameRef.current;
         if (!game) return;
         setShowGameOver(false);
@@ -63,51 +64,18 @@ export default function PhaserGame() {
         }
     };
 
+    const contextValue = {
+        game: gameRef.current,
+        setPaused,
+        resetGame
+    };
+
     return (
-        <GameContext.Provider value={{ game: gameRef.current, setPaused }}>
+        <GameContext.Provider value={contextValue}>
             <div id="game-wrapper">
                 <div ref={containerRef} id="game-container">
                     {paused && !showGameOver && <PauseView />}
-                    {showGameOver && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 10,
-                                gap: '24px',
-                                background: 'rgba(0, 0, 0, 0.5)'
-                            }}
-                        >
-                            <div style={{ fontSize: '64px', color: '#fff', fontWeight: 'bold' }}>
-                                GAME OVER
-                            </div>
-                            <button
-                                onClick={handleTryAgain}
-                                style={{
-                                    fontSize: '28px',
-                                    padding: '10px 32px',
-                                    cursor: 'pointer',
-                                    background: '#444',
-                                    color: '#fff',
-                                    border: '2px solid #888',
-                                    borderRadius: '8px',
-                                    fontFamily: 'Orbitron Variable, sans-serif',
-                                }}
-                                onMouseEnter={(e) =>
-                                    ((e.target as HTMLButtonElement).style.background = '#666')
-                                }
-                                onMouseLeave={(e) =>
-                                    ((e.target as HTMLButtonElement).style.background = '#444')
-                                }
-                            >
-                                Try Again
-                            </button>
-                        </div>
-                    )}
+                    {showGameOver && <GameOverView />}
                 </div>
                 <HudOverlay score={score} health={health} coins={coins} gameOver={showGameOver} />
             </div>

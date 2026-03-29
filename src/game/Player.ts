@@ -27,7 +27,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.thruster = new ThrusterEffect(scene);
         this.rcs = new RcsEffect(scene);
 
-        this.health = 100;
+        this.health = 10;
     }
 
     update(command: ShipCommand) {
