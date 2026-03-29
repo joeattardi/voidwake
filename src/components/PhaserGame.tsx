@@ -6,14 +6,37 @@ import PauseView from './PauseView';
 import GameContext from './GameContext';
 import GameOverView from './GameOverView';
 
+const waveBannerStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+    zIndex: 5,
+};
+
+const waveBannerTextStyle: React.CSSProperties = {
+    fontFamily: "'Orbitron Variable', sans-serif",
+    fontSize: '48px',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    color: '#0ff',
+    textShadow: '0 0 16px #0ff, 0 0 32px #0088ff, 0 0 64px #0044ff',
+    animation: 'wave-banner-fade 0.4s ease-out',
+};
+
 export default function PhaserGame() {
     const containerRef = useRef<HTMLDivElement>(null);
     const gameRef = useRef<Phaser.Game | null>(null);
+    const waveMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [showGameOver, setShowGameOver] = useState(false);
     const [paused, setPaused] = useState(false);
     const [score, setScore] = useState(0);
     const [health, setHealth] = useState(100);
     const [coins, setCoins] = useState(0);
+    const [waveNumber, setWaveNumber] = useState(0);
+    const [waveMessage, setWaveMessage] = useState<string | null>(null);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -29,6 +52,17 @@ export default function PhaserGame() {
         game.events.on('score-changed', (value: number) => setScore(value));
         game.events.on('health-changed', (value: number) => setHealth(value));
         game.events.on('coin-collected', (value: number) => setCoins(value));
+        game.events.on('wave-start', (wave: number) => {
+            setWaveNumber(wave);
+            if (waveMessageTimeoutRef.current) clearTimeout(waveMessageTimeoutRef.current);
+            setWaveMessage(`Wave ${wave} incoming!`);
+            waveMessageTimeoutRef.current = setTimeout(() => setWaveMessage(null), 2000);
+        });
+        game.events.on('wave-cleared', (wave: number) => {
+            if (waveMessageTimeoutRef.current) clearTimeout(waveMessageTimeoutRef.current);
+            setWaveMessage(`Wave ${wave} cleared!`);
+            waveMessageTimeoutRef.current = setTimeout(() => setWaveMessage(null), 2000);
+        });
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key !== 'Escape') return;
@@ -42,6 +76,7 @@ export default function PhaserGame() {
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
+            if (waveMessageTimeoutRef.current) clearTimeout(waveMessageTimeoutRef.current);
             if (gameRef.current) {
                 gameRef.current.destroy(true);
                 gameRef.current = null;
@@ -57,6 +92,9 @@ export default function PhaserGame() {
         setScore(0);
         setHealth(100);
         setCoins(0);
+        setWaveNumber(0);
+        setWaveMessage(null);
+        if (waveMessageTimeoutRef.current) clearTimeout(waveMessageTimeoutRef.current);
         const scene = game.scene.getScene('MainScene');
         if (scene) {
             scene.sound.stopAll();
@@ -76,8 +114,13 @@ export default function PhaserGame() {
                 <div ref={containerRef} id="game-container">
                     {paused && !showGameOver && <PauseView />}
                     {showGameOver && <GameOverView />}
+                    {waveMessage && !showGameOver && (
+                        <div style={waveBannerStyle}>
+                            <span style={waveBannerTextStyle}>{waveMessage}</span>
+                        </div>
+                    )}
                 </div>
-                <HudOverlay score={score} health={health} coins={coins} gameOver={showGameOver} />
+                <HudOverlay score={score} health={health} coins={coins} gameOver={showGameOver} wave={waveNumber} />
             </div>
         </GameContext.Provider>
     );

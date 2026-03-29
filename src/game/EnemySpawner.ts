@@ -11,19 +11,12 @@ export class EnemySpawner {
         private scene: Phaser.Scene,
         private player: Player,
         private enemyDef: EnemyData,
-        { maxEnemies = 220, cullDistance = 3400, spawnRate = 1000 } = {}
+        { maxEnemies = 220, cullDistance = 3400 } = {}
     ) {
         this.maxEnemies = maxEnemies;
         this.cullDistance = cullDistance;
 
         this.group = this.scene.physics.add.group();
-
-        this.scene.time.addEvent({
-            delay: spawnRate,
-            callback: this.spawn,
-            callbackScope: this,
-            loop: true
-        });
     }
 
     update(): void {
@@ -34,7 +27,7 @@ export class EnemySpawner {
         this.cullDistant();
     }
 
-    private spawn(): void {
+    spawnOne(): void {
         if (this.player?.health <= 0) {
             return;
         }

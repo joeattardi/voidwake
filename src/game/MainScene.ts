@@ -8,6 +8,7 @@ import { EnemySpawner } from './EnemySpawner';
 import { Weapons } from './Weapons';
 import { CoinManager } from './CoinManager';
 import { CombatResolver } from './CombatResolver';
+import { WaveManager } from './WaveManager';
 import { loadAssets } from './AssetManifest';
 import enemyDefs from './enemies.json';
 import weaponDefs from './weapons.json';
@@ -23,6 +24,7 @@ export default class MainScene extends Phaser.Scene {
     private weapons!: Weapons;
     private coinManager!: CoinManager;
     private combat!: CombatResolver;
+    private waveManager!: WaveManager;
 
     constructor() {
         super('MainScene');
@@ -50,6 +52,8 @@ export default class MainScene extends Phaser.Scene {
 
         this.coinManager = new CoinManager(this, this.player);
         this.combat = new CombatResolver(this, this.player, this.coinManager);
+        this.waveManager = new WaveManager(this, this.player, this.spawner);
+        this.waveManager.start();
 
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.keys = this.input.keyboard?.addKeys('W,A,S,D,Q,E') as Record<
@@ -116,6 +120,7 @@ export default class MainScene extends Phaser.Scene {
         this.maybeRecenterWorld();
         this.weapons.update(time);
         this.spawner.update();
+        this.waveManager.update(delta);
         this.coinManager.updateMagnet();
         this.radar.update(
             this.player.x,

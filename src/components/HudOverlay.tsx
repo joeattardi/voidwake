@@ -6,13 +6,15 @@ interface HudOverlayProps {
     health: number;
     coins: number;
     gameOver: boolean;
+    wave: number;
 }
 
-export default function HudOverlay({ score, health, coins, gameOver }: HudOverlayProps) {
+export default function HudOverlay({ score, health, coins, gameOver, wave }: HudOverlayProps) {
     const healthPercent = Math.max(0, Math.min(100, health));
 
     return (
         <div className={classes.hudOverlay}>
+            {wave > 0 && <span className={classes.hudItem}>Wave {wave}</span>}
             <span className={classes.hudItem}>Score {score}</span>
             <div className={clsx(classes.hudItem, classes.healthBarContainer)}>
                 <span className={classes.healthLabel}>Shields</span>
