@@ -1,21 +1,20 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
-import { Enemy } from './Enemy';
+import { Enemy, EnemyData } from './Enemy';
 
 export class EnemySpawner {
     readonly group: Phaser.Physics.Arcade.Group;
     private readonly maxEnemies: number;
     private readonly cullDistance: number;
-    private readonly maxSpeed: number;
 
     constructor(
         private scene: Phaser.Scene,
         private player: Player,
-        { maxEnemies = 220, cullDistance = 3400, maxSpeed = 200, spawnRate = 1000 } = {}
+        private enemyDef: EnemyData,
+        { maxEnemies = 220, cullDistance = 3400, spawnRate = 1000 } = {}
     ) {
         this.maxEnemies = maxEnemies;
         this.cullDistance = cullDistance;
-        this.maxSpeed = maxSpeed;
 
         this.group = this.scene.physics.add.group();
 
@@ -28,8 +27,9 @@ export class EnemySpawner {
     }
 
     update(): void {
-        this.group.getChildren().forEach((enemy) => {
-            this.scene.physics.moveToObject(enemy, this.player, this.maxSpeed);
+        this.group.getChildren().forEach((obj) => {
+            const enemy = obj as Enemy;
+            this.scene.physics.moveToObject(enemy, this.player, enemy.definition.speed);
         });
         this.cullDistant();
     }
@@ -54,7 +54,7 @@ export class EnemySpawner {
         const x = this.player.x + Math.cos(angle) * dist;
         const y = this.player.y + Math.sin(angle) * dist;
 
-        const enemy = new Enemy(this.scene, x, y);
+        const enemy = new Enemy(this.scene, x, y, this.enemyDef);
         this.group.add(enemy);
     }
 

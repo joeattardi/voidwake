@@ -1,16 +1,63 @@
 import Phaser from 'phaser';
 
+export interface EnemyData {
+    id: string;
+    name: string;
+    texture: string;
+    oneShot?: boolean;
+    health: number;
+    damage: number;
+    speed: number;
+}
+
+const BAR_WIDTH = 32;
+const BAR_HEIGHT = 4;
+const BAR_OFFSET_Y = -24;
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     declare body: Phaser.Physics.Arcade.Body;
-    health: number;
+    readonly definition: EnemyData;
 
-    constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y, 'enemy');
+    private _health: number;
+    private healthBar: Phaser.GameObjects.Graphics | null;
+
+    get health(): number { return this._health; }
+    set health(value: number) {
+        this._health = value;
+        this.drawHealthBar();
+    }
+
+    constructor(scene: Phaser.Scene, x: number, y: number, definition: EnemyData) {
+        super(scene, x, y, definition.texture);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         this.setCollideWorldBounds(false);
-        this.health = 100;
+
+        this.definition = definition;
+        this._health = definition.health;
+        this.healthBar = definition.oneShot ? null : scene.add.graphics({ x, y });
+        this.drawHealthBar();
+    }
+
+    preUpdate(time: number, delta: number): void {
+        super.preUpdate(time, delta);
+        this.healthBar?.setPosition(this.x, this.y);
+    }
+
+    destroy(fromScene?: boolean): void {
+        this.healthBar?.destroy();
+        super.destroy(fromScene);
+    }
+
+    private drawHealthBar(): void {
+        if (!this.healthBar) return;
+        this.healthBar.clear();
+        this.healthBar.fillStyle(0x220000);
+        this.healthBar.fillRect(-BAR_WIDTH / 2, BAR_OFFSET_Y, BAR_WIDTH, BAR_HEIGHT);
+        const fillW = (this._health / this.definition.health) * BAR_WIDTH;
+        this.healthBar.fillStyle(0xff3333);
+        this.healthBar.fillRect(-BAR_WIDTH / 2, BAR_OFFSET_Y, fillW, BAR_HEIGHT);
     }
 }

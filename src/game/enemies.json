@@ -1,0 +1,11 @@
+[
+  {
+    "id": "drone",
+    "name": "Drone",
+    "texture": "enemy",
+    "oneShot": true,
+    "health": 50,
+    "damage": 10,
+    "speed": 200
+  }
+]

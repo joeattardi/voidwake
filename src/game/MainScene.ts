@@ -9,6 +9,7 @@ import { Weapons } from './Weapons';
 import { CoinManager } from './CoinManager';
 import { CombatResolver } from './CombatResolver';
 import { loadAssets } from './AssetManifest';
+import enemyDefs from './enemies.json';
 
 export default class MainScene extends Phaser.Scene {
     private player!: Player;
@@ -43,7 +44,8 @@ export default class MainScene extends Phaser.Scene {
         this.player = new Player(this, 0, 0);
 
         this.weapons = new Weapons(this, this.player);
-        this.spawner = new EnemySpawner(this, this.player);
+        const drone = enemyDefs.find(e => e.id === 'drone')!;
+        this.spawner = new EnemySpawner(this, this.player, drone);
 
         this.coinManager = new CoinManager(this, this.player);
         this.combat = new CombatResolver(this, this.player, this.coinManager);

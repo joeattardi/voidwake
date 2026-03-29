@@ -45,13 +45,16 @@ export class CombatResolver {
         b.body.enable = false;
         b.body.setVelocity(0, 0);
 
-        e.health -= 50;
-        this.scene.sound.play('damage');
-        if (e.health > 0) {
-            this.shieldHitEmitter.explode(6, b.x, b.y);
-            e.setTintFill(0xffffff);
-            this.scene.time.delayedCall(80, () => e.clearTint());
-            return;
+        this.spawnDamageNumber(e.x, e.y - 24, 50);
+        if (!e.definition.oneShot) {
+            e.health -= 50;
+            this.scene.sound.play('damage');
+            if (e.health > 0) {
+                this.shieldHitEmitter.explode(6, b.x, b.y);
+                e.setTintFill(0xffffff);
+                this.scene.time.delayedCall(80, () => e.clearTint());
+                return;
+            }
         }
 
         this.explosionEmitter.explode(15, e.x, e.y);
@@ -64,11 +67,29 @@ export class CombatResolver {
         this.scene.cameras.main.flash(80, 200, 200, 200);
     }
 
+    private spawnDamageNumber(x: number, y: number, amount: number): void {
+        const text = this.scene.add.text(x, y, `-${amount}`, {
+            fontSize: '14px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3,
+        });
+        text.setOrigin(0.5, 1);
+        this.scene.tweens.add({
+            targets: text,
+            y: y - 40,
+            alpha: 0,
+            duration: 700,
+            ease: 'Cubic.Out',
+            onComplete: () => text.destroy(),
+        });
+    }
+
     hitPlayer(
         _player: Phaser.GameObjects.GameObject,
         enemy: Phaser.GameObjects.GameObject
     ): void {
-        const e = enemy as Phaser.GameObjects.Sprite;
+        const e = enemy as Enemy;
         this.explosionEmitter.explode(15, e.x, e.y);
         e.destroy();
 
@@ -77,7 +98,7 @@ export class CombatResolver {
         this.scene.cameras.main.flash(200, 255, 0, 0);
         this.scene.cameras.main.shake(200, 0.01);
 
-        this.player.health -= 10;
+        this.player.health -= e.definition.damage;
         this.scene.game.events.emit('health-changed', this.player.health);
 
         if (this.player.health <= 0) {
