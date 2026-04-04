@@ -5,11 +5,12 @@ import { Starfield } from './Starfield';
 import { createTextures } from './textures';
 import { Radar } from './Radar';
 import { EnemySpawner } from './EnemySpawner';
-import { Weapons } from './Weapons';
 import { CoinManager } from './CoinManager';
 import { CombatResolver } from './CombatResolver';
 import { WaveManager } from './WaveManager';
 import { GameState } from './GameState';
+import { ShipStats } from './ShipStats';
+import { UpgradeManager } from './UpgradeManager';
 import { loadAssets } from './AssetManifest';
 import enemyDefs from './enemies.json';
 import weaponDefs from './weapons.json';
@@ -22,12 +23,13 @@ export default class MainScene extends Phaser.Scene {
     private readonly worldRecenterThreshold = 12000;
     private radar!: Radar;
     private spawner!: EnemySpawner;
-    private weapons!: Weapons;
     private coinManager!: CoinManager;
     private combat!: CombatResolver;
     private state!: GameState;
     private waveManager!: WaveManager;
     private music!: Phaser.Sound.BaseSound;
+    private shipStats!: ShipStats;
+    private upgradeManager!: UpgradeManager;
 
     constructor() {
         super('MainScene');
@@ -48,15 +50,29 @@ export default class MainScene extends Phaser.Scene {
         this.physics.world.setBounds(-2e6, -2e6, 4e6, 4e6);
         this.physics.world.setBoundsCollision(false, false, false, false);
 
-        this.player = new Player(this, 0, 0, weaponDefs);
+        this.shipStats = new ShipStats();
+        this.player = new Player(this, 0, 0, this.shipStats);
 
-        this.weapons = new Weapons(this, this.player, this.player.weapons[0]);
         const drone = enemyDefs.find(e => e.id === 'drone')!;
         this.spawner = new EnemySpawner(this, this.player, drone);
 
         this.state = new GameState(this.game.events);
         this.coinManager = new CoinManager(this, this.player, this.state);
         this.combat = new CombatResolver(this, this.player, this.coinManager, this.state);
+
+        // Store the hitEnemy callback in registry so UpgradeManager can use it for new weapons
+        this.registry.set('hitEnemyCallback', this.combat.hitEnemy.bind(this.combat));
+        this.registry.set('enemyGroup', this.spawner.group);
+
+        this.upgradeManager = new UpgradeManager(
+            this,
+            this.player,
+            this.spawner.group,
+            this.state,
+            this.shipStats,
+            weaponDefs[0]
+        );
+
         this.waveManager = new WaveManager(this, this.player, this.spawner);
         this.waveManager.start();
 
@@ -83,8 +99,10 @@ export default class MainScene extends Phaser.Scene {
             }
         });
 
+        // Set up collision for initial weapon
+        const initialWeapon = this.upgradeManager.getWeapons()[0];
         this.physics.add.overlap(
-            this.weapons.bullets,
+            initialWeapon.bullets,
             this.spawner.group,
             this.combat.hitEnemy.bind(this.combat) as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
             undefined,
@@ -105,6 +123,21 @@ export default class MainScene extends Phaser.Scene {
             this
         );
 
+        // Listen for upgrade purchases from React
+        this.game.events.on('purchase-upgrade', (upgradeId: string) => {
+            const result = this.upgradeManager.handlePurchase(upgradeId);
+            this.game.events.emit('upgrade-applied', result);
+        });
+
+        // Provide initial upgrade state when store opens
+        this.game.events.on('request-upgrades', () => {
+            this.game.events.emit('upgrade-applied', {
+                success: false,
+                upgrades: this.upgradeManager.buildUpgradeDisplayItems(),
+                coins: this.state.coins,
+            });
+        });
+
         const resumeAudio = (): void => {
             const ctx = (this.sound as Phaser.Sound.WebAudioSoundManager).context;
             if (ctx && ctx.state === 'suspended') {
@@ -122,11 +155,13 @@ export default class MainScene extends Phaser.Scene {
             return;
         }
 
-        const command = buildShipCommand(this.cursors, this.keys, this.player.rotation);
+        const command = buildShipCommand(this.cursors, this.keys, this.player.rotation, this.shipStats);
         this.player.update(command);
 
         this.maybeRecenterWorld();
-        this.weapons.update(time);
+        for (const weapon of this.upgradeManager.getWeapons()) {
+            weapon.update(time, delta);
+        }
         this.spawner.update(delta);
         this.waveManager.update(delta);
         this.coinManager.updateMagnet();
@@ -154,11 +189,13 @@ export default class MainScene extends Phaser.Scene {
             const sprite = c as Phaser.GameObjects.Sprite;
             sprite.setPosition(sprite.x - ox, sprite.y - oy);
         });
-        this.weapons.bullets.getChildren().forEach((b) => {
-            const sprite = b as Phaser.GameObjects.Sprite;
-            if (!sprite.active) return;
-            sprite.setPosition(sprite.x - ox, sprite.y - oy);
-        });
+        for (const weapon of this.upgradeManager.getWeapons()) {
+            weapon.bullets.getChildren().forEach((b) => {
+                const sprite = b as Phaser.GameObjects.Sprite;
+                if (!sprite.active) return;
+                sprite.setPosition(sprite.x - ox, sprite.y - oy);
+            });
+        }
         this.starfield.recenter(ox, oy);
     }
 }

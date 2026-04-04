@@ -1,0 +1,58 @@
+[
+  {
+    "id": "fireRate",
+    "name": "Rapid Fire",
+    "description": "Increases forward laser fire rate",
+    "type": "modifier",
+    "targetWeapon": "laserBolt",
+    "modifies": "fireRate",
+    "levels": [
+      { "level": 1, "value": 400, "cost": 8 },
+      { "level": 2, "value": 300, "cost": 18 },
+      { "level": 3, "value": 200, "cost": 35 }
+    ]
+  },
+  {
+    "id": "rearLaser",
+    "name": "Rear Laser",
+    "description": "Auto-firing rear-facing laser",
+    "type": "weapon",
+    "levels": [{ "level": 1, "cost": 15 }],
+    "weaponData": {
+      "id": "rearLaser",
+      "name": "Rear Laser",
+      "fireRate": 700,
+      "fireDelay": 1200,
+      "bulletSpeed": 450,
+      "damage": 30,
+      "maxDistance": 1200,
+      "texture": "bullet",
+      "trailTexture": "bulletGlow",
+      "tint": "ff8844",
+      "sound": "laserShoot",
+      "firingAngleOffset": 3.14159
+    }
+  },
+  {
+    "id": "homingMissile",
+    "name": "Homing Missiles",
+    "description": "Auto-targeting homing missiles",
+    "type": "weapon",
+    "levels": [{ "level": 1, "cost": 20 }],
+    "weaponData": {
+      "id": "homingMissile",
+      "name": "Homing Missile",
+      "fireRate": 1500,
+      "fireDelay": 2000,
+      "bulletSpeed": 280,
+      "damage": 80,
+      "maxDistance": 2000,
+      "texture": "missile",
+      "trailTexture": "bulletGlow",
+      "tint": "ff4444",
+      "sound": "laserShoot",
+      "homing": true,
+      "turnRate": 3.0
+    }
+  }
+]

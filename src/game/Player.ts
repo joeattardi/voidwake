@@ -2,21 +2,17 @@ import Phaser from 'phaser';
 import { ThrusterEffect } from './ThrusterEffect';
 import { RcsEffect } from './RcsEffect';
 import { ShipCommand } from './InputMapper';
-import { WeaponData } from './Weapons';
-
-const DEFAULT_MAX_SPEED = 220;
+import { ShipStats } from './ShipStats';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
     declare body: Phaser.Physics.Arcade.Body;
     health: number;
-    readonly weapons: WeaponData[];
 
     private thruster: ThrusterEffect;
     private rcs: RcsEffect;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, weapons: WeaponData[]) {
+    constructor(scene: Phaser.Scene, x: number, y: number, private stats: ShipStats) {
         super(scene, x, y, 'player');
-        this.weapons = weapons;
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -25,12 +21,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setRotation(-Math.PI / 2);
         this.setDamping(true);
         this.setDrag(0.99);
-        this.setMaxVelocity(DEFAULT_MAX_SPEED, DEFAULT_MAX_SPEED);
+        this.setMaxVelocity(stats.maxSpeed, stats.maxSpeed);
 
         this.thruster = new ThrusterEffect(scene);
         this.rcs = new RcsEffect(scene);
 
-        this.health = 100;
+        this.health = stats.maxHealth;
     }
 
     update(command: ShipCommand) {
@@ -59,7 +55,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const velocityY = this.body.velocity.y;
 
         const m2 = velocityX * velocityX + velocityY * velocityY;
-        const max = DEFAULT_MAX_SPEED;
+        const max = this.stats.maxSpeed;
         const max2 = max * max;
 
         if (m2 <= max2 || m2 < 1e-6) {

@@ -39,6 +39,13 @@ export class GameState {
         this.gameEvents.emit('coin-collected', this._coins);
     }
 
+    spendCoins(amount: number): boolean {
+        if (this._coins < amount) return false;
+        this._coins -= amount;
+        this.gameEvents.emit('coin-collected', this._coins);
+        return true;
+    }
+
     recordKill(): void {
         this._enemiesKilled += 1;
     }

@@ -6,6 +6,7 @@ import PauseView from './PauseView';
 import GameContext from './GameContext';
 import GameOverView from './GameOverView';
 import StoreView from './StoreView';
+import type { UpgradeDisplayItem } from '../game/UpgradeManager';
 
 const waveBannerStyle: React.CSSProperties = {
     position: 'absolute',
@@ -45,6 +46,7 @@ export default function PhaserGame() {
     const [clearedWave, setClearedWave] = useState(0);
     const [waveMessage, setWaveMessage] = useState<string | null>(null);
     const [gameOverStats, setGameOverStats] = useState({ score: 0, wave: 0, coins: 0 });
+    const [upgrades, setUpgrades] = useState<UpgradeDisplayItem[]>([]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -77,7 +79,15 @@ export default function PhaserGame() {
             setWaveMessage(null);
             setClearedWave(wave);
             setShowStore(true);
-            setTimeout(() => game.events.emit('pause-toggled', true), 500);
+            setTimeout(() => {
+                game.events.emit('pause-toggled', true);
+                game.events.emit('request-upgrades');
+            }, 500);
+        });
+        game.events.on('upgrade-applied', (result: { success: boolean; upgrades: UpgradeDisplayItem[]; coins: number }) => {
+            setUpgrades(result.upgrades);
+            setCoins(result.coins);
+            coinsRef.current = result.coins;
         });
 
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -106,6 +116,10 @@ export default function PhaserGame() {
         gameRef.current?.events.emit('store-dismissed');
     };
 
+    const handlePurchase = (upgradeId: string) => {
+        gameRef.current?.events.emit('purchase-upgrade', upgradeId);
+    };
+
     const resetGame = () => {
         const game = gameRef.current;
         if (!game) return;
@@ -117,6 +131,7 @@ export default function PhaserGame() {
         setCoins(0);
         setWaveNumber(0);
         setWaveMessage(null);
+        setUpgrades([]);
         waveNumberRef.current = 0;
         coinsRef.current = 0;
         if (waveMessageTimeoutRef.current) clearTimeout(waveMessageTimeoutRef.current);
@@ -139,7 +154,13 @@ export default function PhaserGame() {
                 <div ref={containerRef} id="game-container" className={showStore ? 'hide-canvas' : undefined}>
                     {paused && !showGameOver && !showStore && <PauseView />}
                     {showStore && !showGameOver && (
-                        <StoreView wave={clearedWave} coins={coins} onContinue={dismissStore} />
+                        <StoreView
+                            wave={clearedWave}
+                            coins={coins}
+                            upgrades={upgrades}
+                            onPurchase={handlePurchase}
+                            onContinue={dismissStore}
+                        />
                     )}
                     {showGameOver && <GameOverView stats={gameOverStats} />}
                     {waveMessage && !showGameOver && !showStore && (

@@ -126,4 +126,13 @@ export function createTextures(scene: Phaser.Scene): void {
     graphics.fillStyle(0xffaaaa, 0.35);
     graphics.fillCircle(20, 20, 5);
     graphics.generateTexture('warpFlash', 40, 40);
+
+    // Missile — small elongated shape with pointed nose
+    graphics.clear();
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillRect(0, 3, 10, 4);
+    graphics.fillTriangle(10, 2, 14, 5, 10, 8);
+    graphics.fillStyle(0xff6644, 0.8);
+    graphics.fillRect(0, 4, 3, 2);
+    graphics.generateTexture('missile', 14, 10);
 }

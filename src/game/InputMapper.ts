@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ShipStats } from './ShipStats';
 
 export interface ShipCommand {
     acceleration: { x: number; y: number };
@@ -12,40 +13,38 @@ interface AccelerationVector {
     y: number;
 }
 
-const THRUST = 300;
-const ANGULAR_SPEED = 220;
-
 export function buildShipCommand(
     cursors: Phaser.Types.Input.Keyboard.CursorKeys,
     keys: Record<string, Phaser.Input.Keyboard.Key>,
-    rotation: number
+    rotation: number,
+    stats: ShipStats
 ): ShipCommand {
     const isRotatingLeft = cursors.left.isDown || keys.A.isDown;
     const isRotatingRight = cursors.right.isDown || keys.D.isDown;
 
     let angularVelocity = 0;
     if (isRotatingLeft && !isRotatingRight) {
-        angularVelocity = -ANGULAR_SPEED;
+        angularVelocity = -stats.angularSpeed;
     } else if (isRotatingRight && !isRotatingLeft) {
-        angularVelocity = ANGULAR_SPEED;
+        angularVelocity = stats.angularSpeed;
     }
 
     const acceleration: AccelerationVector = { x: 0, y: 0 };
 
     if (cursors.up.isDown || keys.W.isDown) {
-        applyAcceleration(acceleration, rotation, 1, THRUST);
+        applyAcceleration(acceleration, rotation, 1, stats.thrust);
     }
 
     if (cursors.down.isDown || keys.S.isDown) {
-        applyAcceleration(acceleration, rotation, -1, THRUST);
+        applyAcceleration(acceleration, rotation, -1, stats.thrust);
     }
 
     if (keys.Q.isDown) {
-        applyLateralAcceleration(acceleration, rotation, -1);
+        applyLateralAcceleration(acceleration, rotation, -1, stats.thrust);
     }
 
     if (keys.E.isDown) {
-        applyLateralAcceleration(acceleration, rotation, 1);
+        applyLateralAcceleration(acceleration, rotation, 1, stats.thrust);
     }
 
     return { acceleration, angularVelocity, isRotatingLeft, isRotatingRight };
@@ -64,8 +63,9 @@ function applyAcceleration(
 function applyLateralAcceleration(
     acceleration: AccelerationVector,
     rotation: number,
-    offset: number
+    offset: number,
+    thrust: number
 ) {
-    acceleration.x += Math.cos(rotation + (offset * Math.PI) / 2) * THRUST;
-    acceleration.y += Math.sin(rotation + (offset * Math.PI) / 2) * THRUST;
+    acceleration.x += Math.cos(rotation + (offset * Math.PI) / 2) * thrust;
+    acceleration.y += Math.sin(rotation + (offset * Math.PI) / 2) * thrust;
 }

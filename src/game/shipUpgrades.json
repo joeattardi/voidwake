@@ -1,0 +1,35 @@
+[
+  {
+    "id": "topSpeed",
+    "name": "Top Speed",
+    "description": "Increases maximum velocity",
+    "stat": "maxSpeed",
+    "levels": [
+      { "level": 1, "value": 260, "cost": 5 },
+      { "level": 2, "value": 300, "cost": 12 },
+      { "level": 3, "value": 350, "cost": 25 }
+    ]
+  },
+  {
+    "id": "shieldStrength",
+    "name": "Shield Strength",
+    "description": "Increases maximum health",
+    "stat": "maxHealth",
+    "levels": [
+      { "level": 1, "value": 130, "cost": 5 },
+      { "level": 2, "value": 170, "cost": 12 },
+      { "level": 3, "value": 220, "cost": 25 }
+    ]
+  },
+  {
+    "id": "rotationSpeed",
+    "name": "Rotation Speed",
+    "description": "Increases turning rate",
+    "stat": "angularSpeed",
+    "levels": [
+      { "level": 1, "value": 270, "cost": 5 },
+      { "level": 2, "value": 330, "cost": 12 },
+      { "level": 3, "value": 400, "cost": 25 }
+    ]
+  }
+]
